@@ -1,4 +1,7 @@
+; -------------------------------------------------
+; modules/menu.asm
 ; Menu and game-over screens.  The input routine returns a simple choice to main.asm.
+; -------------------------------------------------
 
 %include "assets/title_art.inc"
 %include "assets/gameover_art.inc"
@@ -18,21 +21,27 @@ over_hint_text db 'Press R or SPACE to restart.  Press Q or ESC to quit.', 0
 ; -------------------------------------------------
 show_main_menu:
     call clear_screen
+    
+    ; Draw colored Title Art (Assuming line length of 24 characters)
     mov dh, 5
     mov dl, 28
-    call set_cursor
     mov si, title_art_line1
-    call print_string
+    mov cx, 24
+    call draw_colored_sprite
+
+    ; Draw menu options and hints using standard print or colored text
     mov dh, 7
     mov dl, 35
     call set_cursor
     mov si, menu_play_text
     call print_string
+
     mov dh, 8
     mov dl, 35
     call set_cursor
     mov si, menu_quit_text
     call print_string
+
     mov dh, 12
     mov dl, 9
     call set_cursor
@@ -50,11 +59,14 @@ show_main_menu:
 ; -------------------------------------------------
 show_game_over:
     call clear_screen
+    
+    ; Draw colored Game Over Art (Assuming line length of 26 characters)
     mov dh, 7
     mov dl, 27
-    call set_cursor
     mov si, gameover_art_line1
-    call print_string
+    mov cx, 26
+    call draw_colored_sprite
+
     mov dh, 12
     mov dl, 11
     call set_cursor

@@ -1,4 +1,8 @@
-; All text-mode drawing is isolated here.  Gameplay modules must not print.
+; -------------------------------------------------
+; modules/display.asm
+; All text-mode drawing is isolated here. 
+; Gameplay modules must not print.
+; -------------------------------------------------
 
 %include "assets/player_art.inc"
 %include "assets/enemy_art.inc"
@@ -80,30 +84,36 @@ draw_player:
 
 ; -------------------------------------------------
 ; Procedure: draw_enemy
-; Purpose: Draw the living prototype enemy ASCII sprite.
+; Purpose: Draw the multi-colored enemy ASCII sprite.
 ; Input: None
-; Output: Enemy art is displayed if enemy_alive is 1.
-; Modifies: AX, DX, SI
+; Output: Enemy art is displayed with colors if enemy_alive is 1.
+; Modifies: AX, CX, DX, SI, BL
 ; Shared variables used: enemy_x, enemy_y, enemy_alive
 ; -------------------------------------------------
 draw_enemy:
     cmp byte [enemy_alive], 1
     jne .done
+    
+    ; Draw Line 1 with color attributes
     mov dh, [enemy_y]
     mov dl, [enemy_x]
-    call set_cursor
     mov si, enemy_art_line1
-    call print_string
+    mov cx, 12          ; Number of character/attribute pairs in line 1
+    call draw_colored_sprite
+
+    ; Draw Line 2 with color attributes
     inc dh
     mov dl, [enemy_x]
-    call set_cursor
     mov si, enemy_art_line2
-    call print_string
+    mov cx, 12          ; Number of character/attribute pairs in line 2
+    call draw_colored_sprite
+
+    ; Draw Line 3 with color attributes
     inc dh
     mov dl, [enemy_x]
-    call set_cursor
     mov si, enemy_art_line3
-    call print_string
+    mov cx, 12          ; Number of character/attribute pairs in line 3
+    call draw_colored_sprite
 .done:
     ret
 
@@ -191,4 +201,46 @@ draw_game:
     call draw_enemy
     call draw_bullet
     call draw_player
+    ret
+
+; -------------------------------------------------
+; Procedure: draw_colored_sprite
+; Purpose: Render custom ASCII art with explicit color attributes per character.
+; Input: SI = pointer to sprite row data ([char, attr, char, attr...]), CX = row length, DX = screen coordinates (Row, Col)
+; Output: Colored sprite row is rendered.
+; Modifies: AX, BX, CX, DX, SI
+; -------------------------------------------------
+draw_colored_sprite:
+    push ax
+    push bx
+    push cx
+    push dx
+
+    ; Set cursor position using INT 10h, AH=02h
+    mov ah, 02h
+    mov bh, 00h         ; Page 0
+    int 10h
+
+draw_char_loop:
+    lodsb               ; Load character into AL, increment SI
+    mov bl, [si]        ; Load color attribute into BL, increment SI
+    inc si
+
+    ; Write character and attribute to screen using INT 10h, AH=09h
+    mov ah, 09h
+    mov bh, 00h         ; Page 0
+    mov cx, 0001h       ; Print 1 time
+    int 10h
+
+    ; Move cursor column forward
+    inc dl
+    mov ah, 02h
+    int 10h
+
+    loop draw_char_loop
+
+    pop dx
+    pop cx
+    pop bx
+    pop ax
     ret
