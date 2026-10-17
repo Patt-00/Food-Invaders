@@ -69,6 +69,11 @@ def run(path):
                 raise RuntimeError(f"Unsupported video service {ax:04x}")
         elif number == 0x15 and ah == 0x86:
             flags(1, False)
+        elif number == 0x1A and ah == 0x00:
+            cpu.reg_write(UC_X86_REG_CX, 0x1234)
+            cpu.reg_write(UC_X86_REG_DX, 0x5678)
+            cpu.reg_write(UC_X86_REG_AX, 0)
+            flags(1, False)
         elif number == 0x16:
             if ah == 5:
                 keyboard.append(cpu.reg_read(UC_X86_REG_CX))

@@ -252,6 +252,10 @@ spawn_enemy_projectile:
  xor eax,eax
  jmp .done
 .spawn:
+ mov ecx,eax
+ add ecx,HOSTILE_SHOT_WIDTH
+ cmp ecx,RIGHT
+ ja .fail
  mov [esi+S_X],eax
  mov [esi+S_Y],edx
  mov dword [esi+S_ACTIVE],1
@@ -278,17 +282,19 @@ update_hostile_bullets:
  pushad
  call check_hostile_hits
  add dword [shot_timer],50
- cmp dword [shot_timer],150
+ cmp dword [shot_timer],HOSTILE_SHOT_STEP_MS
  jb .done
- sub dword [shot_timer],150
+ sub dword [shot_timer],HOSTILE_SHOT_STEP_MS
  mov esi,shots
  mov ecx,MAX_SHOTS
 .move:
  cmp dword [esi+S_ACTIVE],0
  je .next
  inc dword [esi+S_Y]
- cmp dword [esi+S_Y],BOTTOM
- jl .next
+ mov eax,[esi+S_Y]
+ add eax,HOSTILE_SHOT_HEIGHT
+ cmp eax,BOTTOM
+ jbe .next
  mov dword [esi+S_ACTIVE],0
 .next:
  add esi,S_SIZE

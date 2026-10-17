@@ -6,6 +6,78 @@
 ; removes them. DS/ES must address the COM segment; ESP is normalized by main.
 ; Inputs/outputs and shared state documented below. Internal labels are local.
 
+; seed_random(): mix the BIOS clock with the previous PRNG state at new-game start.
+seed_random:
+ pushad
+ mov ah,00h
+ int 1Ah
+ movzx eax,dx
+ movzx ebx,cx
+ shl ebx,16
+ xor eax,ebx
+ xor eax,[random_state]
+ test eax,eax
+ jnz .store
+ mov eax,1
+.store:
+ mov [random_state],eax
+ popad
+ ret
+
+; next_random(): 32-bit LCG; EAX receives the next value.
+next_random:
+ mov eax,[random_state]
+ imul eax,eax,1664525
+ add eax,1013904223
+ mov [random_state],eax
+ ret
+
+; random_in_range(): EAX=minimum, ECX=range; return [minimum, minimum+range).
+random_in_range:
+ push ebx
+ push edx
+ mov ebx,eax
+ call next_random
+ shr eax,16
+ xor edx,edx
+ div ecx
+ mov eax,edx
+ add eax,ebx
+ pop edx
+ pop ebx
+ ret
+
+random_attack_delay:
+ mov eax,[attack_min_interval]
+ mov ecx,[attack_interval_range]
+ call random_in_range
+ ret
+
+; choose_enemy_target(): EBX=slot, ESI=enemy record; choose a broad independent destination.
+choose_enemy_target:
+ push ecx
+ push edx
+ mov edx,[esi+E_TYPE]
+ imul edx,T_SIZE
+ mov eax,RIGHT
+ sub eax,[type_table+edx+T_W]
+ inc eax
+ mov ecx,eax
+ xor eax,eax
+ call random_in_range
+ mov [enemy_target_x+ebx],al
+ mov eax,RANDOM_ENEMY_MAX_Y
+ sub eax,[type_table+edx+T_H]
+ sub eax,TOP
+ inc eax
+ mov ecx,eax
+ mov eax,TOP
+ call random_in_range
+ mov [enemy_target_y+ebx],al
+ pop edx
+ pop ecx
+ ret
+
 ; initialize_enemies(): reads current_wave; clears encounter state/projectiles.
 ; Creates two rows of five regular enemies or one boss on multiples of five.
 initialize_enemies:
@@ -16,6 +88,9 @@ initialize_enemies:
  mov edi,enemies
  mov ecx,MAX_ENEMIES*E_SIZE/4
  cld
+ a32 rep stosd
+ mov edi,enemy_move_timers
+ mov ecx,MAX_ENEMIES*4
  a32 rep stosd
  mov [enemy_events],eax
  mov [completion_sent],eax
@@ -34,18 +109,20 @@ initialize_enemies:
  ; Stage scaling is capped so simulation never takes multi-cell steps.
  mov eax,[current_wave]
  dec eax
- cmp eax,8
+ cmp eax,3
  jbe .scale
- mov eax,8
+ mov eax,3
 .scale:
- imul eax,20
- mov edx,300
+ mov ecx,eax
+ imul eax,150
+ mov edx,3500
  sub edx,eax
- mov [move_interval],edx
- shl eax,1
- mov edx,1200
- sub edx,eax
- mov [attack_interval],edx
+ mov [attack_min_interval],edx
+ imul ecx,200
+ mov eax,5000
+ sub eax,ecx
+ mov [attack_interval_range],eax
+ mov dword [move_interval],300 ; Legacy field; live movement uses per-enemy random timers.
  mov dword [alive_count],MAX_ENEMIES
  xor ebx,ebx
  mov esi,enemies
@@ -71,6 +148,18 @@ initialize_enemies:
  mov [esi+E_X],edx
  mov [esi+E_SX],edx
  mov dword [esi+E_ACTIVE],1
+ mov eax,200
+ mov ecx,501              ; Each enemy chooses a new 200-700 ms move delay.
+ call random_in_range
+ mov [enemy_move_intervals+ebx*4],eax
+ call choose_enemy_target
+ mov eax,[esi+E_TYPE]
+ imul eax,T_SIZE
+ cmp dword [type_table+eax+T_SHOOT],0
+ je .no_fire_timer
+ call random_attack_delay
+ mov [enemy_fire_intervals+ebx*4],eax
+.no_fire_timer:
  add esi,E_SIZE
  inc ebx
  cmp ebx,MAX_ENEMIES
@@ -80,7 +169,8 @@ initialize_enemies:
  mov dword [boss_mode],1
  mov dword [alive_count],1
  mov dword [move_interval],200
- mov dword [attack_interval],900
+ mov dword [attack_min_interval],1800
+ mov dword [attack_interval_range],1400
  mov dword [enemies+E_ACTIVE],1
  mov dword [enemies+E_TYPE],5
  mov dword [enemies+E_HP],20
@@ -88,6 +178,15 @@ initialize_enemies:
  mov dword [enemies+E_SX],34
  mov dword [enemies+E_Y],TOP
  mov dword [enemies+E_SY],TOP
+ xor ebx,ebx
+ mov esi,enemies
+ call choose_enemy_target
+ mov eax,200
+ mov ecx,401
+ call random_in_range
+ mov [enemy_move_intervals],eax
+ call random_attack_delay
+ mov [enemy_fire_intervals],eax
 .done:
  pop edi
  pop esi
@@ -97,19 +196,32 @@ initialize_enemies:
 ; reset_enemy_positions(): preserves HP/dead slots and resets timers/direction.
 reset_enemy_positions:
  push esi
+ push edi
+ push ebx
  mov esi,enemies
+ xor edi,edi
  mov ecx,MAX_ENEMIES
 .loop:
  mov eax,[esi+E_SX]
  mov [esi+E_X],eax
  mov eax,[esi+E_SY]
  mov [esi+E_Y],eax
+ mov dword [enemy_move_timers+edi*4],0
+ mov dword [enemy_fire_timers+edi*4],0
+ cmp dword [esi+E_ACTIVE],0
+ je .next_reset
+ mov ebx,edi
+ call choose_enemy_target
+.next_reset:
  add esi,E_SIZE
+ inc edi
  loop .loop
  mov dword [direction],1
  mov dword [move_timer],0
  mov dword [attack_timer],0
  and dword [enemy_events],~EV_BREACH
+ pop ebx
+ pop edi
  pop esi
  ret
 
@@ -255,12 +367,18 @@ move_enemies:
  pop ebx
  ret
 
-; fire_enemy(): bottommost eligible formation slot, round-robin selection.
-; Every slot shares a column with the slot five places away.
+; fire_enemy(): random starting slot followed by an eligibility scan.
+; Upper-row shooters are skipped while their lower-row ally is alive.
 fire_enemy:
  push ebx
  push esi
  push edi
+ call next_random
+ shr eax,16
+ xor edx,edx
+ mov ecx,MAX_ENEMIES
+ div ecx
+ mov [shooter_cursor],edx
  xor edi,edi
 .scan:
  mov ebx,[shooter_cursor]
@@ -290,6 +408,7 @@ fire_enemy:
  mov eax,[edx+T_W]
  shr eax,1
  add eax,[esi+E_X]
+ sub eax,HOSTILE_SHOT_WIDTH/2
  push ecx
  push eax
  call spawn_enemy_projectile
@@ -305,27 +424,157 @@ fire_enemy:
  pop ebx
  ret
 
-; update_enemies(): original no-argument interface, one nominal 50ms tick.
+; fire_enemy_slot(): EBX is the shooter whose independent timer expired.
+fire_enemy_slot:
+ push ebx
+ push esi
+ push edi
+ push ebx
+ call get_enemy_bounds
+ add esp,4
+ test eax,eax
+ jz .done
+ cmp dword [edx+T_SHOOT],0
+ je .done
+ mov esi,eax
+ mov ecx,[edx+T_H]
+ add ecx,[esi+E_Y]
+ mov eax,[edx+T_W]
+ shr eax,1
+ add eax,[esi+E_X]
+ sub eax,HOSTILE_SHOT_WIDTH/2
+ push ecx
+ push eax
+ call spawn_enemy_projectile
+ add esp,8
+.done:
+ pop edi
+ pop esi
+ pop ebx
+ ret
+
+; update_enemies(): independently wander active enemies and schedule a random volley.
 update_enemies:
+ pushad
  cmp dword [alive_count],0
  je .done
  test dword [enemy_events],EV_BREACH
  jnz .done
- mov eax,50
- add [move_timer],eax
- add [attack_timer],eax
- mov eax,[move_interval]
- cmp [move_timer],eax
- jb .attack
- sub [move_timer],eax
- call move_enemies
-.attack:
- test dword [enemy_events],EV_BREACH
- jnz .done
- mov eax,[attack_interval]
- cmp [attack_timer],eax
- jb .done
- sub [attack_timer],eax
- call fire_enemy
+ xor ebx,ebx
+ mov esi,enemies
+.wander:
+ cmp dword [esi+E_ACTIVE],0
+ je .next_enemy
+ mov eax,[enemy_move_timers+ebx*4]
+ add eax,50
+ mov [enemy_move_timers+ebx*4],eax
+ cmp eax,[enemy_move_intervals+ebx*4]
+ jb .fire_timer
+ sub eax,[enemy_move_intervals+ebx*4]
+ mov [enemy_move_timers+ebx*4],eax
+ call next_random
+ shr eax,16
+ test al,1
+ jz .move_x
+ jmp .move_y
+.move_x:
+ movzx edi,byte [enemy_target_x+ebx]
+ mov eax,[esi+E_X]
+ cmp eax,edi
+ je .move_y
+ jb .x_right
+ mov eax,1
+ mov ecx,4
+ call random_in_range
+ mov edx,[esi+E_X]
+ sub edx,eax
+ jc .x_left_target
+ cmp edx,edi
+ jae .x_left_store
+.x_left_target:
+ mov edx,edi
+.x_left_store:
+ mov [esi+E_X],edx
+ jmp .reschedule
+.x_right:
+ mov eax,1
+ mov ecx,4
+ call random_in_range
+ mov edx,[esi+E_X]
+ add edx,eax
+ cmp edx,edi
+ jbe .x_right_store
+ mov edx,edi
+.x_right_store:
+ mov [esi+E_X],edx
+ jmp .reschedule
+.move_y:
+ movzx edi,byte [enemy_target_y+ebx]
+ mov eax,[esi+E_Y]
+ cmp eax,edi
+ je .choose_target
+ jb .y_down
+ mov eax,1
+ mov ecx,2
+ call random_in_range
+ mov edx,[esi+E_Y]
+ sub edx,eax
+ jc .y_up_target
+ cmp edx,edi
+ jae .y_up_store
+.y_up_target:
+ mov edx,edi
+.y_up_store:
+ mov [esi+E_Y],edx
+ jmp .reschedule
+.y_down:
+ mov eax,1
+ mov ecx,2
+ call random_in_range
+ mov edx,[esi+E_Y]
+ add edx,eax
+ cmp edx,edi
+ jbe .y_down_store
+ mov edx,edi
+.y_down_store:
+ mov [esi+E_Y],edx
+ jmp .reschedule
+.choose_target:
+ movzx eax,byte [enemy_target_x+ebx]
+ cmp eax,[esi+E_X]
+ jne .reschedule
+ movzx eax,byte [enemy_target_y+ebx]
+ cmp eax,[esi+E_Y]
+ jne .reschedule
+ call choose_enemy_target
+.reschedule:
+ mov eax,200
+ mov ecx,501
+ call random_in_range
+ mov [enemy_move_intervals+ebx*4],eax
+.fire_timer:
+ mov eax,[esi+E_TYPE]
+ imul eax,T_SIZE
+ cmp dword [type_table+eax+T_SHOOT],0
+ je .next_enemy
+ mov eax,[enemy_fire_timers+ebx*4]
+ add eax,50
+ mov [enemy_fire_timers+ebx*4],eax
+ cmp eax,[enemy_fire_intervals+ebx*4]
+ jb .next_enemy
+ sub eax,[enemy_fire_intervals+ebx*4]
+ mov [enemy_fire_timers+ebx*4],eax
+ call random_attack_delay
+ mov [enemy_fire_intervals+ebx*4],eax
+ call fire_enemy_slot
+.next_enemy:
+ add esi,E_SIZE
+ inc ebx
+ cmp ebx,MAX_ENEMIES
+ jb .wander
+ jmp .done
+.breach:
+ or dword [enemy_events],EV_BREACH
 .done:
+ popad
  ret

@@ -39,7 +39,12 @@ tests_start:
  check byte [player_lives],3,'starting lives'
  check dword [enemies+2*E_SIZE+E_HP],2,'burger HP'
  check dword [enemies+4*E_SIZE+E_HP],2,'pizza HP'
- ; Movement timing: five ticks do not move, sixth tick moves one cell.
+ ; Isolate the randomized per-enemy timer with a deterministic fixture.
+ ; Five 50 ms ticks must not move; the sixth expires the 300 ms interval.
+ mov dword [enemy_move_intervals],300
+ mov dword [enemy_move_timers],0
+ mov byte [enemy_target_x],11
+ mov byte [enemy_target_y],4
  mov ebx,5
 .wait:
  push dword 50
@@ -48,10 +53,21 @@ tests_start:
  dec ebx
  jnz .wait
  check dword [enemies+E_X],10,'movement cooldown'
+ check dword [enemies+E_Y],3,'movement y cooldown'
+ check dword [enemy_move_timers],250,'movement timer accumulates elapsed time'
  push dword 50
  call update_enemies
  add esp,4
- check dword [enemies+E_X],11,'timed horizontal movement'
+ cmp dword [enemies+E_X],11
+ je .timed_x_step
+ check dword [enemies+E_X],10,'timed vertical step keeps x'
+ check dword [enemies+E_Y],4,'randomized timer permits vertical step'
+ jmp .timed_step_done
+.timed_x_step:
+ check dword [enemies+E_X],11,'randomized timer permits horizontal x step'
+ check dword [enemies+E_Y],3,'randomized timer permits horizontal step'
+.timed_step_done:
+ check dword [enemy_move_timers],0,'movement timer consumes elapsed interval'
  ; Both edges, and no repeated descent on the following horizontal tick.
  call solo
  mov dword [enemies+E_X],RIGHT-5
@@ -198,13 +214,28 @@ tests_start:
  call spawn_enemy_projectile
  add esp,8
  check eax,0,'negative projectile rejected'
- ; Shooter selection blocks upper slots behind living allies.
+ ; Randomized shooter selection blocks upper slots behind living allies.
  call initialize_game
  call fire_enemy
- check dword [shots+S_X],51,'bottom hotdog shoots first'
+ mov eax,[shots+S_X]
+ cmp eax,50
+ jne .first_check_pizza
+ inc dword [test_count]
+ jmp .first_bottom_shooter_ok
+.first_check_pizza:
+ check eax,64,'first random shooter is an unblocked bottom enemy'
+.first_bottom_shooter_ok:
  check dword [shots+S_Y],11,'shot starts below sprite'
  call fire_enemy
- check dword [shots+S_SIZE+S_X],65,'round robin pizza second'
+ mov eax,[shots+S_SIZE+S_X]
+ cmp eax,50
+ jne .second_check_pizza
+ inc dword [test_count]
+ jmp .second_bottom_shooter_ok
+.second_check_pizza:
+ check eax,64,'second random shooter is an unblocked bottom enemy'
+.second_bottom_shooter_ok:
+ check dword [shots+S_SIZE+S_Y],11,'second bottom shot starts below sprite'
  ; Single life loss when multiple sources coincide; preserve survivors HP.
  call solo
  mov dword [enemies+E_X],TEST_PLAYER_X
@@ -232,14 +263,15 @@ tests_start:
  mov dword [loss_pending],1
  call resolve_game_events
  check byte [player_lives],0,'lives never underflow'
- ; Simultaneous final kill and player hit: loss first, progression next tick.
+ ; Simultaneous final kill and player hit: aim inside the Chef's vulnerable
+ ; center hitbox; loss is resolved before progression on the following tick.
  call solo
  mov byte [bullet_active],1
  mov byte [bullets_damage],1
  mov byte [bullet_x],12
  mov byte [bullet_y],4
- push dword TEST_PLAYER_Y
- push dword TEST_PLAYER_X
+ push dword TEST_PLAYER_Y+PLAYER_DANGER_Y
+ push dword TEST_PLAYER_X+PLAYER_DANGER_X
  call spawn_enemy_projectile
  add esp,8
  call simulate_tick
@@ -259,7 +291,7 @@ tests_start:
  check dword [direction],-1,'boss wall reversal'
  check dword [enemies+E_Y],2,'boss no descent'
  call fire_enemy
- check dword [shots+S_X],RIGHT-6,'boss shot centered'
+ check dword [shots+S_X],RIGHT-7,'boss shot centered'
  check dword [shots+S_Y],6,'boss shot below rectangle'
  push dword 20
  push dword 0
@@ -384,7 +416,7 @@ tests_start:
  call spawn_enemy_projectile
  add esp,8
  call draw_game
- check word [back_buffer+(21*SCREEN_WIDTH+TEST_PLAYER_X)*2],0C21h,'enemy projectile visible'
+ check word [back_buffer+(21*SCREEN_WIDTH+TEST_PLAYER_X)*2],0CDBh,'enemy projectile visible'
  mov dword [current_wave],5
  call initialize_enemies
  call draw_game
@@ -393,6 +425,14 @@ tests_start:
  check word [back_buffer+((7+TEST_MENU_Y)*SCREEN_WIDTH+30+TEST_MENU_X)*2],0C47h,'game over renders'
  call show_victory
  check word [back_buffer+((7+TEST_MENU_Y)*SCREEN_WIDTH+22+TEST_MENU_X)*2],0A4Bh,'victory renders'
+%ifdef VISUAL_TEST
+ ; Optional manual capture mode: the normal self-test has already completed
+ ; the full campaign simulation and verified VICTORY before reaching here.
+ mov dword [score],1220
+ call show_victory
+ mov ah,00h
+ int 16h
+%endif
  ; Check full register preservation around the rendering boundary.
  mov eax,0F1234567h
  mov ebx,0E2345678h

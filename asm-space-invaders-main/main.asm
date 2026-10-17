@@ -104,6 +104,7 @@ initialize_game:
     mov byte [shield_active], 0
     mov byte [powerup_active], 0
     mov byte [game_state], PLAYING
+    call seed_random
     call initialize_enemies
     popad
     ret

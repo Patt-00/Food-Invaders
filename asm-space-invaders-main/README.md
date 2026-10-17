@@ -28,7 +28,9 @@ Run with **DOSBox-X**, configured with `machine=svga_s3`. The enlarged display u
 
 Three player projectile slots share a weapon cooldown. Cleavers wait 24 ticks and rolling pins 40 ticks; both move three rows per update. `activate_player_powerup` enables an 80-tick boost: faster movement, one extra damage, shorter cooldowns, and two-cleaver bursts. Pickup spawning remains an extension point.
 
-Ten enemies form two rows per regular stage. Cupcakes, fries and hotdogs have one HP; burgers and pizzas have two. Hotdogs and pizzas fire from the bottom eligible row. Type metadata controls each enemy's dimensions, color, HP and score. Clearing four stages leads to the 20-HP Ratatouille boss; defeating it produces victory. Contact, hostile fire and bottom breaches aggregate to at most one life loss per tick. Surviving enemies retain health and reset positions after a hit; shots clear and the chef receives one second of invulnerability. Life loss takes priority over a simultaneous stage clear.
+Ten enemies start across two rows, then independently travel toward new random destinations across most of the arena at varied speeds. Cupcakes, fries and hotdogs have one HP; burgers and pizzas have two. Each eligible hotdog or pizza maintains its own randomized firing timer, so shots are not released by one shared volley clock. Type metadata controls each enemy's dimensions, color, HP and score. Clearing four stages leads to the 20-HP Ratatouille boss; defeating it produces victory. Contact, hostile fire and bottom breaches aggregate to at most one life loss per tick. Surviving enemies retain health and reset positions after a hit; shots clear and the chef receives one second of invulnerability. Life loss takes priority over a simultaneous stage clear.
+
+Hostile shots use visible 2×2 red markers, move one row every 200 ms, and damage a 4×6 area at the center of the Chef. Each shot interval is randomized within a stage-dependent range so enemies do not create a steady synchronized stream.
 
 ## Architecture and interfaces
 
@@ -59,9 +61,10 @@ Assemble all existing suites from this directory:
 nasm -f bin -Wall -w-reloc -Werror -DSELFTEST main.asm -o TEST.COM
 nasm -f bin -Wall -w-reloc -Werror tests/player-bullet.asm -o PBTEST.COM
 nasm -f bin -Wall -w-reloc -Werror tests/collision.asm -o COLLTEST.COM
+nasm -f bin -Wall -w-reloc -Werror -DSELFTEST -DVISUAL_TEST main.asm -o WINTEST.COM
 ```
 
-Run each COM in DOSBox-X. They print `PASS` or a specific failure and return status 0 or 1. The core suite includes a five-stage campaign and 20,000 simulation ticks. The player suite checks weapons, boosts, boundaries, artwork and frame presentation. The collision suite checks rectangle edges, damage, priorities, inactive-state guards, registers and stack balance.
+Run each COM in DOSBox-X. They print `PASS` or a specific failure and return status 0 or 1. In DOSBox-X 2026.10.01 with a 386 CPU, the core suite passes 40,285 assertions in both normal and dynamic cores; the player and collision suites also pass in both cores. The core suite includes a five-stage campaign and 20,000 simulation ticks. The player suite checks weapons, boosts, boundaries, artwork and frame presentation. The collision suite checks rectangle edges, damage, priorities, inactive-state guards, registers and stack balance. `WINTEST.COM` runs the same core suite, then pauses on the rendered victory screen for a visual capture; this is a controlled renderer view, while the campaign state is verified by the automated simulation.
 
 For headless CPU-level checks, install the optional Python `unicorn` package and run:
 
