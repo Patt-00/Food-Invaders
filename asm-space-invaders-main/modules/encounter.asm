@@ -4,6 +4,7 @@ simulate_tick:
  pushad
  cmp byte [game_state],PLAYING
  jne .done
+ call update_player
  call update_combat_timers
  call check_collisions
  call update_bullets

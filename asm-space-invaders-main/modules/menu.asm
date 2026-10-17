@@ -2,9 +2,9 @@
 %include "assets/title_art.inc"
 %include "assets/gameover_art.inc"
 menu_hint_text db '1 / P / SPACE: play      2 / Q / ESC: quit',0
-controls_text db 'A / D or arrow keys: move     SPACE: throw cleaver',0
+controls_text db 'A / D or arrow keys: move     SPACE: cleaver  X: rolling pin',0
 legend_text db 'Cupcake   Fries   Burger   Hotdog   Pizza    Boss: Ratatouille',0
-details_text db 'Hotdog and Pizza shoot. Burger and Pizza take two hits.',0
+details_text db 'Hotdog and Pizza shoot. Burger and Pizza take two cleaver hits.',0
 boss_text db 'Clear four stages, then defeat Ratatouille (20 HP).',0
 over_hint_text db 'R / SPACE: restart      Q / ESC: quit',0
 victory_text db 'KITCHEN SAVED - RATATOUILLE DEFEATED!',0
@@ -14,24 +14,24 @@ show_main_menu:
  pushad
  call clear_screen
  mov bl,0Ah
- mov dx,0418h
+ mov dx,0418h + ((SCREEN_HEIGHT-25)/2)*256 + (SCREEN_WIDTH-80)/2
  mov si,title_art_line1
  call print_string
  mov bl,0Fh
- mov dx,080Eh
+ mov dx,080Eh + ((SCREEN_HEIGHT-25)/2)*256 + (SCREEN_WIDTH-80)/2
  mov si,controls_text
  call print_string
- mov dx,0B0Ah
+ mov dx,0B0Ah + ((SCREEN_HEIGHT-25)/2)*256 + (SCREEN_WIDTH-80)/2
  mov si,legend_text
  call print_string
- mov dx,0D0Ch
+ mov dx,0D0Ch + ((SCREEN_HEIGHT-25)/2)*256 + (SCREEN_WIDTH-80)/2
  mov si,details_text
  call print_string
- mov dx,0F0Eh
+ mov dx,0F0Eh + ((SCREEN_HEIGHT-25)/2)*256 + (SCREEN_WIDTH-80)/2
  mov si,boss_text
  call print_string
  mov bl,0Eh
- mov dx,1312h
+ mov dx,1312h + ((SCREEN_HEIGHT-25)/2)*256 + (SCREEN_WIDTH-80)/2
  mov si,menu_hint_text
  call print_string
  call present_screen
@@ -41,7 +41,7 @@ show_main_menu:
 show_game_over:
  pushad
  call clear_screen
- mov dx,071Eh
+ mov dx,071Eh + ((SCREEN_HEIGHT-25)/2)*256 + (SCREEN_WIDTH-80)/2
  mov bl,0Ch
  mov si,gameover_art_line1
  call print_string
@@ -52,7 +52,7 @@ show_game_over:
 show_victory:
  pushad
  call clear_screen
- mov dx,0716h
+ mov dx,0716h + ((SCREEN_HEIGHT-25)/2)*256 + (SCREEN_WIDTH-80)/2
  mov bl,0Ah
  mov si,victory_text
  call print_string
@@ -62,13 +62,13 @@ show_victory:
 
 draw_result:
  mov bl,0Fh
- mov dx,0A1Eh
+ mov dx,0A1Eh + ((SCREEN_HEIGHT-25)/2)*256 + (SCREEN_WIDTH-80)/2
  mov si,result_text
  call print_string
- mov dl,43
+ mov dl,43+(SCREEN_WIDTH-80)/2
  mov eax,[score]
  call print_number32
- mov dx,0E16h
+ mov dx,0E16h + ((SCREEN_HEIGHT-25)/2)*256 + (SCREEN_WIDTH-80)/2
  mov si,over_hint_text
  call print_string
  call present_screen

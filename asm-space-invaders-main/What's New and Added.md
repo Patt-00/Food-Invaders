@@ -1,3 +1,5 @@
+> Historical enemy-branch report: this document describes the pre-merge 80×25 version. See [README.md](README.md) and [MERGE-VALIDATION.md](MERGE-VALIDATION.md) for the integrated 132×120 game and its validation.
+
 # What's New and Added
 
 This document describes the changes made after fetching the original `Patt-00/asm-space-invaders` project. It covers the Food Invaders version in `food-invaders-with-impEnemies` and replaces the previous `UPDATED-FILES.md`.

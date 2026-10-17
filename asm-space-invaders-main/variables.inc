@@ -1,8 +1,53 @@
-; One authoritative data definition. Logical cells, half-open arena bounds.
+; Shared game data and constants.  This file is included once by main.asm.
+
+SCREEN_WIDTH    equ 132
+SCREEN_HEIGHT   equ 120
+PLAYFIELD_TOP   equ 1        ; Row zero belongs to the HUD.
+PLAYER_WIDTH    equ 12
+PLAYER_HEIGHT   equ 16
+SOURCE_ART_WIDTH equ 12
+SOURCE_ART_HEIGHT equ 16
+WEAPON_SCALE    equ 2        ; Reduce only weapon artwork in the renderer.
+WEAPON_WIDTH    equ SOURCE_ART_WIDTH / WEAPON_SCALE
+WEAPON_HEIGHT   equ SOURCE_ART_HEIGHT / WEAPON_SCALE
+BULLET_SPEED    equ 3        ; Rows per update; independent of firing cooldown.
+
+; VGA 32 KiB text memory and 8-bit coordinates bound this display mode.
+%if SCREEN_WIDTH != 132 || SCREEN_HEIGHT != 120
+    %error "Display timing is configured for 132x120 cells"
+%endif
+%if SCREEN_WIDTH * SCREEN_HEIGHT * 2 > 32768
+    %error "Text frame must fit in VGA text memory"
+%endif
+
+; Keep the chef at source size; halve weapon width and height at draw time.
+%if PLAYER_WIDTH != SOURCE_ART_WIDTH || PLAYER_HEIGHT != SOURCE_ART_HEIGHT
+    %error "Player dimensions must match source artwork dimensions"
+%endif
+%if WEAPON_SCALE != 2 || WEAPON_WIDTH * WEAPON_SCALE != SOURCE_ART_WIDTH || WEAPON_HEIGHT * WEAPON_SCALE != SOURCE_ART_HEIGHT
+    %error "Weapon renderer requires exact 2x2 source blocks"
+%endif
+%if BULLET_SPEED < 1 || BULLET_SPEED > WEAPON_HEIGHT
+    %error "Projectile steps must stay within sprite height to avoid skipped collisions"
+%endif
+MAX_BULLETS     equ 3
+CLEAVER         equ 0
+ROLLING_PIN     equ 1
+NORMAL_COOLDOWN equ 24        ; Frames; main loop waits roughly 50 ms.
+BOOST_COOLDOWN  equ 20
+SECONDARY_COOLDOWN equ 40   ; Stronger weapon: a slower two-second cadence.
+BOOST_SECONDARY_COOLDOWN equ 32
+BOOST_BURST_COUNT equ 2
+BOOST_FRAMES    equ 80       ; Roughly four seconds.
+INITIAL_ENEMY_HEALTH equ 8   ; Eight cleavers or four rolling pins per demo enemy.
+
+ENEMY_WIDTH     equ 5
+ENEMY_HEIGHT    equ 3
+
 %define LEFT 0
-%define RIGHT 80
+%define RIGHT SCREEN_WIDTH
 %define TOP 2
-%define BOTTOM 25
+%define BOTTOM (SCREEN_HEIGHT - 1)
 %define MAX_ENEMIES 10
 %define MAX_SHOTS 16
 %define MENU 0
@@ -36,30 +81,34 @@
 %define S_SIZE 12
 
 
-; Existing interfaces retained. Player/bullet coordinates are BYTES.
-SCREEN_WIDTH equ RIGHT
-PLAYER_WIDTH equ 5
-PLAYER_HEIGHT equ 3
-ENEMY_WIDTH equ 5 ; legacy fallback only; new code uses each type's metadata
-ENEMY_HEIGHT equ 3
-player_x db 38
-player_y db 22
-player_lives db 3
-bullet_x db 0
-bullet_y db 0
-bullet_active db 0
-game_state db MENU
-shield_active db 0
-powerup_active db 0
-score dd 0
-current_wave dd 1
-; Legacy names alias slot zero, not duplicate enemy state.
+
+player_x        db (SCREEN_WIDTH - PLAYER_WIDTH) / 2       ; Left column of the player sprite (0 through SCREEN_WIDTH - PLAYER_WIDTH).
+player_y        db SCREEN_HEIGHT - PLAYER_HEIGHT - 1       ; Top row of the player sprite (within the playfield).
+player_lives    db 3        ; Remaining player lives for future enemy attacks.
+
+; Legacy names alias slot zero; array users index with SI (0..MAX_BULLETS-1).
+bullet_x:
+bullets_x       times MAX_BULLETS db 0
+bullet_y:
+bullets_y       times MAX_BULLETS db 0
+bullet_active:
+bullets_active  times MAX_BULLETS db 0
+bullets_kind    times MAX_BULLETS db CLEAVER
+bullets_damage  times MAX_BULLETS db 0 ; Damage is captured at firing time.
+fire_cooldown   db 0
+player_boost_frames dw 0
+
+; Legacy enemy names alias slot zero. Enemy fields and score are DWORDs.
 enemy_x equ enemies+E_X
 enemy_y equ enemies+E_Y
 enemy_alive equ enemies+E_ACTIVE
-
+enemy_health equ enemies+E_HP
+score dd 0
+current_wave dd 1
+game_state db MENU
+shield_active db 0
+powerup_active db 0
 %include "assets/enemy_art.inc"
-%include "assets/player_art.inc"
 
 shot_timer dd 0
 alive_count dd 0
@@ -78,4 +127,3 @@ enemies times MAX_ENEMIES*E_SIZE db 0
 shots times MAX_SHOTS*S_SIZE db 0
 
 invulnerable dd 0
-fire_timer dd 0

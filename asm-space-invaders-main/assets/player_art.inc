@@ -1,2 +1,18 @@
-; Compact chef, 5 columns x 3 rows.
-art_player:  db ' _^_ ','(o.o)','/###\'
+; Original 12x16 document artwork. Drawn at native size, one character per cell.
+player_art:
+    db '  ########  '
+    db '  ########  '
+    db '  ########  '
+    db '  ########  '
+    db '############'
+    db '## HH @@ HH '
+    db '## HHHHHHHH '
+    db '  ########  '
+    db '  ## JJJJ ##'
+    db '#### WW ####'
+    db '## W[P]W WW '
+    db '## WWWWWWWW '
+    db '  ## KK ##  '
+    db '  ## KK ##  '
+    db '  ## KK ##  '
+    db '####    ####'

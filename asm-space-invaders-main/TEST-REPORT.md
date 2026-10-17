@@ -1,3 +1,5 @@
+> Historical enemy-branch report: this document describes the pre-merge 80×25 version. See [README.md](README.md) and [MERGE-VALIDATION.md](MERGE-VALIDATION.md) for the integrated 132×120 game and its validation.
+
 # Food Invaders DOSBox implementation and test report
 
 17 October 2026. This report supersedes the earlier native Windows implementation report.

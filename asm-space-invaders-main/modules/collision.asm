@@ -1,54 +1,66 @@
-; Collision reads the same bounds/type table as movement and drawing.
-; Real-mode DWORD cdecl, nonvolatile 32-bit registers preserved. Contacts are aggregated, then resolved.
-
-; check_bullet_enemy(): point vs half-open enemy rectangle, one bullet/one hit.
+; Shared rectangle collision for every player shot and enemy type.
+; Public checks require DS=shared segment, preserve all general-purpose
+; registers, and ignore non-PLAYING states. Contacts/breaches are aggregated
+; in loss_pending; resolve_game_events applies one life loss per tick.
 check_bullet_enemy:
- push ebx
- push esi
- cmp byte [bullet_active],0
- je .done
+ pushad
+ cmp byte [game_state],PLAYING
+ jne .done
+ xor edi,edi
+.shot:
+ cmp byte [bullets_active+di],1
+ jne .next_shot
  xor ebx,ebx
-.loop:
+.enemy:
  push ebx
  call get_enemy_bounds
  add esp,4
  test eax,eax
- jz .next
+ jz .next_enemy
  mov esi,eax
- movzx ecx,byte [bullet_x]
- cmp ecx,[esi+E_X]
- jl .next
+ movzx ecx,byte [bullets_x+di]
+ mov eax,ecx
+ add eax,WEAPON_WIDTH
+ cmp eax,[esi+E_X]
+ jle .next_enemy
  mov eax,[esi+E_X]
  add eax,[edx+T_W]
  cmp ecx,eax
- jge .next
- movzx ecx,byte [bullet_y]
- cmp ecx,[esi+E_Y]
- jl .next
+ jge .next_enemy
+ movzx ecx,byte [bullets_y+di]
+ mov eax,ecx
+ add eax,WEAPON_HEIGHT
+ cmp eax,[esi+E_Y]
+ jle .next_enemy
  mov eax,[esi+E_Y]
  add eax,[edx+T_H]
  cmp ecx,eax
- jge .next
- mov byte [bullet_active],0
- push dword 1
+ jge .next_enemy
+ movzx ecx,byte [bullets_damage+di]
+ mov si,di
+ call remove_bullet_slot
+ push ecx
  push ebx
  call apply_enemy_damage
  add esp,8
  add [score],edx
- jmp .done
-.next:
+ jmp .next_shot
+.next_enemy:
  inc ebx
  cmp ebx,MAX_ENEMIES
- jb .loop
+ jb .enemy
+.next_shot:
+ inc edi
+ cmp edi,MAX_BULLETS
+ jb .shot
 .done:
- pop esi
- pop ebx
+ popad
  ret
 
-; check_enemy_player(): AABB overlap, no hit on merely touching edges.
 check_enemy_player:
- push ebx
- push esi
+ pushad
+ cmp byte [game_state],PLAYING
+ jne .done
  cmp dword [invulnerable],0
  jne .done
  xor ebx,ebx
@@ -84,13 +96,14 @@ check_enemy_player:
  cmp ebx,MAX_ENEMIES
  jb .loop
 .done:
- pop esi
- pop ebx
+ popad
  ret
 
-; check_hostile_hits(): consumes shots even during player invulnerability.
+
 check_hostile_hits:
- push esi
+ pushad
+ cmp byte [game_state],PLAYING
+ jne .done
  mov esi,shots
  mov ecx,MAX_SHOTS
 .loop:
@@ -113,18 +126,46 @@ check_hostile_hits:
 .next:
  add esi,S_SIZE
  loop .loop
- pop esi
+.done:
+ popad
  ret
 
-; check_collisions(): does not immediately mutate stage/lives, allowing aggregation.
-check_collisions:
- call check_bullet_enemy
- call check_enemy_player
- call check_hostile_hits
+
+; Latch an occupied cell entering the footer, or an atomic movement breach.
+check_enemy_bottom:
+ pushad
+ cmp byte [game_state],PLAYING
+ jne .done
  test dword [enemy_events],EV_BREACH
- jz .done
+ jnz .breach
+ xor ebx,ebx
+.loop:
+ push ebx
+ call get_enemy_bounds
+ add esp,4
+ test eax,eax
+ jz .next
+ mov ecx,[eax+E_Y]
+ add ecx,[edx+T_H]
+ cmp ecx,BOTTOM
+ jg .breach
+.next:
+ inc ebx
+ cmp ebx,MAX_ENEMIES
+ jb .loop
+ jmp .done
+.breach:
+ or dword [enemy_events],EV_BREACH
  cmp dword [invulnerable],0
  jne .done
  mov dword [loss_pending],1
 .done:
+ popad
+ ret
+
+check_collisions:
+ call check_bullet_enemy
+ call check_enemy_player
+ call check_hostile_hits
+ call check_enemy_bottom
  ret
