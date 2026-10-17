@@ -1,246 +1,265 @@
-; -------------------------------------------------
-; modules/display.asm
-; All text-mode drawing is isolated here. 
-; Gameplay modules must not print.
-; -------------------------------------------------
+; Text-mode renderer: one 80x25 back buffer, copied to B800h once per frame.
+; Movement/collision/drawing share type widths/heights. No Windows pixels.
+; All routines preserve full general-purpose registers unless noted.
+buffer_guard_before dd 0A5C33C5Ah
+back_buffer times 80*25 dw 0720h
+buffer_guard_after dd 05AC33CA5h
+render_x dd 0
+render_y dd 0
+render_width dd 0
+render_rows dd 0
+render_column dd 0
+number_buffer times 12 db 0
+hud_score_text db 'SCORE:',0
+hud_lives_text db 'LIVES:',0
+hud_stage_text db 'STAGE:',0
+hud_boss_text db 'RATATOUILLE HP:',0
 
-%include "assets/player_art.inc"
-%include "assets/enemy_art.inc"
-%include "assets/bullet_art.inc"
-
-hud_score_text db 'SCORE: ', 0
-hud_lives_text db 'LIVES: ', 0
-
-; -------------------------------------------------
-; Procedure: clear_screen
-; Purpose: Clear the 80x25 text display.
-; Input: None
-; Output: Screen contains blank white-on-black cells.
-; Modifies: AX, BX, CX, DX
-; Shared variables used: None
-; -------------------------------------------------
 clear_screen:
-    mov ax, 0600h
-    mov bh, 07h
-    mov cx, 0000h
-    mov dx, 184Fh
-    int 10h
-    ret
+ pushad
+ push es
+ mov ax,ds
+ mov es,ax
+ mov di,back_buffer
+ mov ax,0720h
+ mov cx,80*25
+ cld
+ rep stosw
+ pop es
+ popad
+ ret
 
-; -------------------------------------------------
-; Procedure: set_cursor
-; Purpose: Position the text cursor.
-; Input: DH = row (0-24), DL = column (0-79)
-; Output: Cursor is positioned.
-; Modifies: AX, BX
-; Shared variables used: None
-; -------------------------------------------------
+present_screen:
+ pushad
+ push es
+ mov ax,0B800h
+ mov es,ax
+ mov si,back_buffer
+ xor di,di
+ mov cx,80*25
+ cld
+ rep movsw
+ pop es
+ popad
+ ret
+
+; EAX=x, EDX=y, BL=character, BH=text attribute. Clip before buffer access.
+draw_cell:
+ pushad
+ cmp eax,80
+ jae .done
+ cmp edx,25
+ jae .done
+ imul edi,edx,80
+ add edi,eax
+ shl edi,1
+ mov [back_buffer+edi],bx
+.done:
+ popad
+ ret
+
+; Original interface kept: DH=row, DL=column. Software rendering uses DX.
 set_cursor:
-    mov ah, 02h
-    mov bh, 0
-    int 10h
-    ret
+ ret
 
-; -------------------------------------------------
-; Procedure: print_string
-; Purpose: Print a zero-terminated string at the current cursor position.
-; Input: DS:SI = string address
-; Output: Characters are displayed.
-; Modifies: AX, SI
-; Shared variables used: None
-; -------------------------------------------------
+; DS:SI=zero-terminated string, DX=row/column, BL=attribute. All preserved.
 print_string:
-    lodsb
-    or al, al
-    jz .done
-    mov ah, 0Eh
-    mov bh, 0
-    mov bl, 07h
-    int 10h
-    jmp print_string
+ pushad
+ movzx esi,si
+ movzx ecx,dl
+ movzx ebp,dh
+ movzx edi,bl
+ shl edi,8
+.next:
+ mov al,[esi]
+ test al,al
+ jz .done
+ cmp ecx,80
+ jae .done
+ mov ebx,edi
+ mov bl,al
+ mov eax,ecx
+ mov edx,ebp
+ call draw_cell
+ inc esi
+ inc ecx
+ jmp .next
 .done:
-    ret
+ popad
+ ret
 
-; -------------------------------------------------
-; Procedure: draw_player
-; Purpose: Draw the player ASCII sprite from shared coordinates.
-; Input: None
-; Output: Player art is displayed.
-; Modifies: AX, DX, SI
-; Shared variables used: player_x, player_y
-; -------------------------------------------------
-draw_player:
-    mov dh, [player_y]
-    mov dl, [player_x]
-    call set_cursor
-    mov si, player_art_line1
-    call print_string
-    inc dh
-    mov dl, [player_x]
-    call set_cursor
-    mov si, player_art_line2
-    call print_string
-    ret
-
-; -------------------------------------------------
-; Procedure: draw_enemy
-; Purpose: Draw the multi-colored enemy ASCII sprite.
-; Input: None
-; Output: Enemy art is displayed with colors if enemy_alive is 1.
-; Modifies: AX, CX, DX, SI, BL
-; Shared variables used: enemy_x, enemy_y, enemy_alive
-; -------------------------------------------------
-draw_enemy:
-    cmp byte [enemy_alive], 1
-    jne .done
-    
-    ; Draw Line 1 with color attributes
-    mov dh, [enemy_y]
-    mov dl, [enemy_x]
-    mov si, enemy_art_line1
-    mov cx, 12          ; Number of character/attribute pairs in line 1
-    call draw_colored_sprite
-
-    ; Draw Line 2 with color attributes
-    inc dh
-    mov dl, [enemy_x]
-    mov si, enemy_art_line2
-    mov cx, 12          ; Number of character/attribute pairs in line 2
-    call draw_colored_sprite
-
-    ; Draw Line 3 with color attributes
-    inc dh
-    mov dl, [enemy_x]
-    mov si, enemy_art_line3
-    mov cx, 12          ; Number of character/attribute pairs in line 3
-    call draw_colored_sprite
-.done:
-    ret
-
-; -------------------------------------------------
-; Procedure: draw_bullet
-; Purpose: Draw the one active player bullet.
-; Input: None
-; Output: Bullet art is displayed when active.
-; Modifies: AX, DX, SI
-; Shared variables used: bullet_x, bullet_y, bullet_active
-; -------------------------------------------------
-draw_bullet:
-    cmp byte [bullet_active], 1
-    jne .done
-    mov dh, [bullet_y]
-    mov dl, [bullet_x]
-    call set_cursor
-    mov si, bullet_art
-    call print_string
-.done:
-    ret
-
-; -------------------------------------------------
-; Procedure: draw_hud
-; Purpose: Draw score and lives across the top row.
-; Input: None
-; Output: HUD text is displayed.
-; Modifies: AX, BX, DX, SI
-; Shared variables used: score, player_lives
-; -------------------------------------------------
-draw_hud:
-    mov dh, 0
-    mov dl, 1
-    call set_cursor
-    mov si, hud_score_text
-    call print_string
-    mov ax, [score]
-    call print_number_0_99
-    mov dh, 0
-    mov dl, 65
-    call set_cursor
-    mov si, hud_lives_text
-    call print_string
-    mov al, [player_lives]
-    add al, '0'
-    mov ah, 0Eh
-    int 10h
-    ret
-
-; -------------------------------------------------
-; Procedure: print_number_0_99
-; Purpose: Print an unsigned score from 0 through 99.
-; Input: AX = number to print
-; Output: Decimal number is displayed at the current cursor.
-; Modifies: AX, BX, DX
-; Shared variables used: None
-; -------------------------------------------------
-print_number_0_99:
-    mov bl, 10
-    div bl                      ; AL = tens digit, AH = ones digit.
-    mov dl, ah
-    or al, al
-    jz .ones
-    add al, '0'
-    mov ah, 0Eh
-    int 10h
-.ones:
-    mov al, dl
-    add al, '0'
-    mov ah, 0Eh
-    int 10h
-    ret
-
-; -------------------------------------------------
-; Procedure: draw_game
-; Purpose: Render a complete gameplay frame from shared state.
-; Input: None
-; Output: Screen displays the current game state.
-; Modifies: AX, BX, CX, DX, SI
-; Shared variables used: player, bullet, enemy, score, and lives variables
-; -------------------------------------------------
-draw_game:
-    call clear_screen
-    call draw_hud
-    call draw_enemy
-    call draw_bullet
-    call draw_player
-    ret
-
-; -------------------------------------------------
-; Procedure: draw_colored_sprite
-; Purpose: Render custom ASCII art with explicit color attributes per character.
-; Input: SI = pointer to sprite row data ([char, attr, char, attr...]), CX = row length, DX = screen coordinates (Row, Col)
-; Output: Colored sprite row is rendered.
-; Modifies: AX, BX, CX, DX, SI
-; -------------------------------------------------
+; Legacy character/attribute pair interface, for future assets. CX=row length.
+; Do not overwrite CX with BIOS repeat counts as the original renderer did.
 draw_colored_sprite:
-    push ax
-    push bx
-    push cx
-    push dx
+ pushad
+ movzx esi,si
+ movzx ecx,cx
+ movzx eax,dl
+ movzx edx,dh
+.loop:
+ test ecx,ecx
+ jz .done
+ mov bx,[esi]
+ call draw_cell
+ add esi,2
+ inc eax
+ dec ecx
+ jmp .loop
+.done:
+ popad
+ ret
 
-    ; Set cursor position using INT 10h, AH=02h
-    mov ah, 02h
-    mov bh, 00h         ; Page 0
-    int 10h
+; EAX=x, EDX=y, ESI=raw rectangular art, ECX=width, EBP=height, BL=color.
+draw_rectangle_art:
+ pushad
+ mov [render_x],eax
+ mov [render_y],edx
+ mov [render_width],ecx
+ mov [render_rows],ebp
+ mov bh,bl
+.row:
+ mov dword [render_column],0
+.column:
+ mov bl,[esi]
+ mov eax,[render_x]
+ add eax,[render_column]
+ mov edx,[render_y]
+ call draw_cell
+ inc esi
+ inc dword [render_column]
+ mov eax,[render_width]
+ cmp [render_column],eax
+ jb .column
+ inc dword [render_y]
+ dec dword [render_rows]
+ jnz .row
+ popad
+ ret
 
-draw_char_loop:
-    lodsb               ; Load character into AL, increment SI
-    mov bl, [si]        ; Load color attribute into BL, increment SI
-    inc si
+draw_enemy:
+ pushad
+ mov edi,enemies
+ mov ecx,MAX_ENEMIES
+.loop:
+ cmp dword [edi+E_ACTIVE],0
+ je .next
+ push ecx
+ mov eax,[edi+E_TYPE]
+ imul eax,T_SIZE
+ lea ebx,[type_table+eax]
+ mov esi,[ebx+T_ART]
+ mov ecx,[ebx+T_W]
+ mov ebp,[ebx+T_H]
+ mov ebx,[ebx+T_COLOR]
+ mov eax,[edi+E_X]
+ mov edx,[edi+E_Y]
+ call draw_rectangle_art
+ pop ecx
+.next:
+ add edi,E_SIZE
+ loop .loop
+ popad
+ ret
 
-    ; Write character and attribute to screen using INT 10h, AH=09h
-    mov ah, 09h
-    mov bh, 00h         ; Page 0
-    mov cx, 0001h       ; Print 1 time
-    int 10h
+draw_player:
+ pushad
+ test dword [invulnerable],80h
+ jnz .done
+ movzx eax,byte [player_x]
+ movzx edx,byte [player_y]
+ mov esi,art_player
+ mov ecx,PLAYER_WIDTH
+ mov ebp,PLAYER_HEIGHT
+ mov bl,0Bh
+ call draw_rectangle_art
+.done:
+ popad
+ ret
 
-    ; Move cursor column forward
-    inc dl
-    mov ah, 02h
-    int 10h
+draw_bullet:
+ pushad
+ cmp byte [bullet_active],0
+ je .hostile
+ movzx eax,byte [bullet_x]
+ movzx edx,byte [bullet_y]
+ mov bx,0F7Ch                ; white '|' (cleaver projectile)
+ call draw_cell
+.hostile:
+ mov esi,shots
+ mov ecx,MAX_SHOTS
+.loop:
+ cmp dword [esi+S_ACTIVE],0
+ je .next
+ mov eax,[esi+S_X]
+ mov edx,[esi+S_Y]
+ mov bx,0C21h                ; red '!' (hostile projectile)
+ call draw_cell
+.next:
+ add esi,S_SIZE
+ loop .loop
+ popad
+ ret
 
-    loop draw_char_loop
+; EAX=unsigned DWORD number, DX=row/column, BL=color. All preserved.
+; Original name retained as an alias; now safely handles scores above 99.
+print_number_0_99:
+print_number32:
+ pushad
+ movzx ebp,dx
+ mov esi,number_buffer+11
+ mov byte [esi],0
+ mov ecx,10
+.digit:
+ xor edx,edx
+ div ecx
+ add dl,'0'
+ dec esi
+ mov [esi],dl
+ test eax,eax
+ jnz .digit
+ mov edx,ebp
+ call print_string
+ popad
+ ret
 
-    pop dx
-    pop cx
-    pop bx
-    pop ax
-    ret
+draw_hud:
+ pushad
+ mov bl,0Fh
+ mov dx,0001h
+ mov si,hud_score_text
+ call print_string
+ mov dl,8
+ mov eax,[score]
+ call print_number32
+ mov dl,29
+ mov si,hud_lives_text
+ call print_string
+ mov dl,36
+ movzx eax,byte [player_lives]
+ call print_number32
+ mov dl,48
+ mov si,hud_stage_text
+ call print_string
+ mov dl,55
+ mov eax,[current_wave]
+ call print_number32
+ cmp dword [boss_mode],0
+ je .done
+ mov dx,0118h
+ mov si,hud_boss_text
+ call print_string
+ mov dl,40
+ mov eax,[enemies+E_HP]
+ call print_number32
+.done:
+ popad
+ ret
+
+draw_game:
+ call clear_screen
+ call draw_hud
+ call draw_enemy
+ call draw_bullet
+ call draw_player
+ call present_screen
+ ret

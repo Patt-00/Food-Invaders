@@ -1,2 +1,1 @@
-; Main-menu title art.
-title_art_line1 db 'S P A C E   I N V A D E R S', 0
+title_art_line1 db 'F O O D   I N V A D E R S', 0

@@ -1,14 +1,22 @@
-; Space Invaders architecture prototype for NASM, DOS, and 80x25 text mode.
+; Food Invaders: DOSBox real mode with 386+ 32-bit gameplay calculations.
 ; Build with: nasm -f bin main.asm -o INVADERS.COM
 
 bits 16
+cpu 386
 org 100h
 
-jmp start
+%ifdef SELFTEST
+    jmp tests_start
+%else
+    jmp start
+%endif
 
 %include "variables.inc"
 
 start:
+    ; DWORD-argument procedures use ESP addressing; DOS only specifies SP.
+    movzx esp, sp
+    cld
     mov ax, cs
     mov ds, ax
     mov es, ax
@@ -25,25 +33,34 @@ new_game:
 
 game_loop:
     call read_input
+    cmp byte [game_state], QUIT
+    je quit_program
     call update_player
-    call update_bullets
-    call update_enemies
-    call check_collisions
+    call simulate_tick
     call update_features
     call draw_game
     call wait_frame
 
     cmp byte [game_state], PLAYING
     je game_loop
+    cmp byte [game_state], VICTORY
+    je won_game
     cmp byte [game_state], GAME_OVER
     jne quit_program
 
     call show_game_over
+    jmp result_input
+won_game:
+    call show_victory
+result_input:
     call wait_for_menu_input       ; R/Space starts over; Q/Esc quits.
     cmp al, 1
     je new_game
 
 quit_program:
+    mov ah, 01h             ; Restore a visible VGA text cursor for DOS.
+    mov cx, 0D0Eh
+    int 10h
     mov ax, 4C00h
     int 21h
 
@@ -52,11 +69,15 @@ quit_program:
 ; Purpose: Select the standard DOS text mode.
 ; Input: None
 ; Output: Screen is in 80x25 text mode.
-; Modifies: AX
+; Modifies: AX, CX (BIOS services)
 ; Shared variables used: None
 ; -------------------------------------------------
 initialize_program:
     mov ax, 0003h
+    int 10h
+    mov ah, 01h             ; Hide hardware cursor; sprites use a back buffer.
+    mov ch, 20h
+    xor cl, cl
     int 10h
     ret
 
@@ -64,24 +85,26 @@ initialize_program:
 ; Procedure: initialize_game
 ; Purpose: Reset all shared state for a new game.
 ; Input: None
-; Output: A fresh playable prototype state.
-; Modifies: AX
+; Output: A fresh Food Invaders formation, score/lives/stage reset.
+; Modifies: Flags only; all general-purpose registers preserved.
 ; Shared variables used: All game state variables
 ; -------------------------------------------------
 initialize_game:
+    pushad
     mov byte [player_x], 38
     mov byte [player_y], 22
     mov byte [player_lives], 3
     mov byte [bullet_active], 0
-    mov byte [enemy_x], 37
-    mov byte [enemy_y], 4
-    mov byte [enemy_alive], 1
-    mov word [score], 0
-    mov byte [current_wave], 1
+    mov dword [score], 0
+    mov dword [current_wave], 1
+    mov dword [invulnerable], 0
+    mov dword [fire_timer], 0
+    mov dword [loss_pending], 0
     mov byte [shield_active], 0
     mov byte [powerup_active], 0
     mov byte [game_state], PLAYING
     call initialize_enemies
+    popad
     ret
 
 ; -------------------------------------------------
@@ -149,6 +172,11 @@ wait_frame:
 %include "modules/bullet.asm"
 %include "modules/enemy.asm"
 %include "modules/collision.asm"
+%include "modules/encounter.asm"
 %include "modules/display.asm"
 %include "modules/menu.asm"
 %include "modules/features.asm"
+
+%ifdef SELFTEST
+%include "tests/core.asm"
+%endif

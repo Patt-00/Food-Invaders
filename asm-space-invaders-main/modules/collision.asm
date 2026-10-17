@@ -1,64 +1,130 @@
-; Coordinate collision logic.  Width and height constants make larger sprites easy later.
+; Collision reads the same bounds/type table as movement and drawing.
+; Real-mode DWORD cdecl, nonvolatile 32-bit registers preserved. Contacts are aggregated, then resolved.
 
-; -------------------------------------------------
-; Procedure: check_collisions
-; Purpose: Run all collision checks for one game loop iteration.
-; Input: None
-; Output: Shared state may change after a collision.
-; Modifies: AX
-; Shared variables used: bullet_active, enemy_alive, player_lives
-; -------------------------------------------------
-check_collisions:
-    call check_bullet_enemy
-    call check_enemy_player
-    ret
-
-; -------------------------------------------------
-; Procedure: check_bullet_enemy
-; Purpose: Detect whether the bullet is within the enemy rectangle.
-; Input: None
-; Output: Enemy is removed, score increases, and game ends when hit.
-; Modifies: AX, BX
-; Shared variables used: bullet_x, bullet_y, bullet_active, enemy_x, enemy_y,
-;                        enemy_alive, score, game_state
-; -------------------------------------------------
+; check_bullet_enemy(): point vs half-open enemy rectangle, one bullet/one hit.
 check_bullet_enemy:
-    cmp byte [bullet_active], 1
-    jne .done
-    cmp byte [enemy_alive], 1
-    jne .done
-
-    mov al, [bullet_x]
-    cmp al, [enemy_x]
-    jb .done
-    mov bl, [enemy_x]
-    add bl, ENEMY_WIDTH
-    cmp al, bl
-    jae .done
-
-    mov al, [bullet_y]
-    cmp al, [enemy_y]
-    jb .done
-    mov bl, [enemy_y]
-    add bl, ENEMY_HEIGHT
-    cmp al, bl
-    jae .done
-
-    mov byte [enemy_alive], 0
-    call remove_bullet
-    add word [score], 10
-    ; One defeated enemy completes this architecture demonstration round.
-    mov byte [game_state], GAME_OVER
+ push ebx
+ push esi
+ cmp byte [bullet_active],0
+ je .done
+ xor ebx,ebx
+.loop:
+ push ebx
+ call get_enemy_bounds
+ add esp,4
+ test eax,eax
+ jz .next
+ mov esi,eax
+ movzx ecx,byte [bullet_x]
+ cmp ecx,[esi+E_X]
+ jl .next
+ mov eax,[esi+E_X]
+ add eax,[edx+T_W]
+ cmp ecx,eax
+ jge .next
+ movzx ecx,byte [bullet_y]
+ cmp ecx,[esi+E_Y]
+ jl .next
+ mov eax,[esi+E_Y]
+ add eax,[edx+T_H]
+ cmp ecx,eax
+ jge .next
+ mov byte [bullet_active],0
+ push dword 1
+ push ebx
+ call apply_enemy_damage
+ add esp,8
+ add [score],edx
+ jmp .done
+.next:
+ inc ebx
+ cmp ebx,MAX_ENEMIES
+ jb .loop
 .done:
-    ret
+ pop esi
+ pop ebx
+ ret
 
-; -------------------------------------------------
-; Procedure: check_enemy_player
-; Purpose: Reserve a clear place for future enemy-to-player collision logic.
-; Input: None
-; Output: None in this static-enemy prototype.
-; Modifies: None
-; Shared variables used: enemy_x, enemy_y, player_x, player_y, player_lives
-; -------------------------------------------------
+; check_enemy_player(): AABB overlap, no hit on merely touching edges.
 check_enemy_player:
-    ret
+ push ebx
+ push esi
+ cmp dword [invulnerable],0
+ jne .done
+ xor ebx,ebx
+.loop:
+ push ebx
+ call get_enemy_bounds
+ add esp,4
+ test eax,eax
+ jz .next
+ mov esi,eax
+ movzx ecx,byte [player_x]
+ mov eax,ecx
+ add eax,PLAYER_WIDTH
+ cmp eax,[esi+E_X]
+ jle .next
+ mov eax,[esi+E_X]
+ add eax,[edx+T_W]
+ cmp ecx,eax
+ jge .next
+ movzx ecx,byte [player_y]
+ mov eax,ecx
+ add eax,PLAYER_HEIGHT
+ cmp eax,[esi+E_Y]
+ jle .next
+ mov eax,[esi+E_Y]
+ add eax,[edx+T_H]
+ cmp ecx,eax
+ jge .next
+ mov dword [loss_pending],1
+ jmp .done
+.next:
+ inc ebx
+ cmp ebx,MAX_ENEMIES
+ jb .loop
+.done:
+ pop esi
+ pop ebx
+ ret
+
+; check_hostile_hits(): consumes shots even during player invulnerability.
+check_hostile_hits:
+ push esi
+ mov esi,shots
+ mov ecx,MAX_SHOTS
+.loop:
+ cmp dword [esi+S_ACTIVE],0
+ je .next
+ mov eax,[esi+S_X]
+ movzx edx,byte [player_x]
+ sub eax,edx
+ cmp eax,PLAYER_WIDTH
+ jae .next
+ mov eax,[esi+S_Y]
+ movzx edx,byte [player_y]
+ sub eax,edx
+ cmp eax,PLAYER_HEIGHT
+ jae .next
+ mov dword [esi+S_ACTIVE],0
+ cmp dword [invulnerable],0
+ jne .next
+ mov dword [loss_pending],1
+.next:
+ add esi,S_SIZE
+ loop .loop
+ pop esi
+ ret
+
+; check_collisions(): does not immediately mutate stage/lives, allowing aggregation.
+check_collisions:
+ call check_bullet_enemy
+ call check_enemy_player
+ call check_hostile_hits
+ test dword [enemy_events],EV_BREACH
+ jz .done
+ cmp dword [invulnerable],0
+ jne .done
+ mov dword [loss_pending],1
+.done:
+ ret
