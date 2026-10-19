@@ -31,10 +31,11 @@ The estimate uses the weighted rubric in `COMPLETION_AUDIT.md`. The first audit 
 | Priority | Task | Owner or dependency | Status |
 |---|---|---|---|
 | High | Review and approve the new title screen and gameplay proportions. | User and group | Awaiting review |
-| High | Update the course Google Doc with current 132 by 88 dimensions, 40,312 assertions, and current individual screenshots. | Group approval; document was left unchanged | Open |
+| High | Reconcile duplicate Chapter 5 tabs, document current 132 by 88 dimensions and 40,312 assertions, correct the INT 10h and B800h explanation, and replace old screenshots. | Group approval; document was left unchanged | Open |
 | High | Add the Appendix C simulation link and Appendix D contribution proof. | Group members | Open |
 | High | Visit the TIP library and add the required book reference. | Group | Pending according to the course document |
 | High | Confirm each member's actual code contribution, AI disclosure, speaker assignment, and sign-off. | Group members | Open |
+| High | Confirm and cite the original-game or source-code references used by the group. | Group confirmation and source details | Open |
 | High | Rehearse the full live demonstration on the presentation computer. | Group and target device | Open |
 | High | Review the ten-slide deck in PowerPoint or Google Slides. | Group | Open |
 | Medium | Run the Windows PowerShell and Termux launchers on their target platforms if the group intends to use them. | Target devices | Unverified |
