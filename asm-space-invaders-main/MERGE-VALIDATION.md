@@ -62,4 +62,4 @@ DOSBox-X 2026.10.01 with a 386 CPU ran `RUNTEST.BAT` on both the normal and dyna
 
 `tests/integrated-binary-hashes.json` records the game and core-test hashes for this verification. The earlier `tests/binary-hashes.json` remains paired with the 17 October record.
 
-The Windows `build.ps1` wrapper was not executed on this host because PowerShell is unavailable. Its NASM commands and the equivalent DOSBox-X batch were run directly. Verify the wrapper on Windows before treating that entry point as platform-tested.
+`build.ps1 -Test` ran under PowerShell 7.6.6 on Fedora 44 for both CPU cores, using a temporary adapter to the installed DOSBox-X Flatpak. The wrapper's headless `-silent` invocation passed all three suites and recorded the results above. The Windows-specific PowerShell/DOSBox-X path was not tested on Windows.

@@ -38,11 +38,12 @@ try {
             $generatedPath = Join-Path $sourceRoot $generatedFile
             if (Test-Path -LiteralPath $generatedPath) { Remove-Item -LiteralPath $generatedPath }
         }
-        # No audio devices are needed by tests. RUNTEST.BAT exits the emulator after reporting status.
+        # Tests use redirected DOS output, so avoid opening an SDL window/audio device.
+        # RUNTEST.BAT exits the emulator after reporting status.
         $previousAudioDriver = $env:SDL_AUDIODRIVER
         try {
             $env:SDL_AUDIODRIVER = 'dummy'
-            & $DosBoxPath -nopromptfolder -fastlaunch -conf $testConfig 2>&1 | Set-Content -LiteralPath (Join-Path $sourceRoot 'tests/dosbox-host.log')
+            & $DosBoxPath -silent -nopromptfolder -fastlaunch -conf $testConfig 2>&1 | Set-Content -LiteralPath (Join-Path $sourceRoot 'tests/dosbox-host.log')
         } finally { $env:SDL_AUDIODRIVER = $previousAudioDriver }
         if (!(Test-Path -LiteralPath 'STATUS.TXT') -or (Get-Content STATUS.TXT -Raw).Trim() -ne 'PASS') {
             foreach ($testLog in @('TESTLOG.TXT','PBLOG.TXT','COLLLOG.TXT')) {
