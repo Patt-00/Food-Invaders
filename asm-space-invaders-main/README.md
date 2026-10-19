@@ -1,6 +1,6 @@
 # Food Invaders
 
-A 16-bit NASM game for 386-compatible real-mode DOS. `main.asm` renders colored ASCII in a 132 by 120 SVGA text screen. The playable build uses all ten ASCII designs from the team document: the Chef, five food enemies, Ratatouille, two weapons, and the fireball pickup.
+A 16-bit NASM game for 386-compatible real-mode DOS. `main.asm` renders colored ASCII in a 132 by 88 SVGA text screen. Eight-pixel cells produce a 1056 by 704 gameplay field with a 3:2 ratio. The playable build uses all ten ASCII designs from the team document: the Chef, five food enemies, Ratatouille, two weapons, and the fireball pickup.
 
 ## Build and run
 
@@ -12,7 +12,7 @@ nasm -f bin main.asm -o INVADERS.COM
 
 `build.bat` provides the same basic build on Windows. `build.ps1 -Test -Core normal` assembles the game and three regression suites, then runs them in DOSBox-X. Repeat with `-Core dynamic` to test the other supported CPU core. All COM files must stay below 60,000 bytes to leave room for the DOS stack.
 
-Run with **DOSBox-X** and the `machine=svga_s3` setting. The game uses custom vertical timing for the 132 by 120 display. `dosbox.conf` supplies the emulator settings and starts `INVADERS.COM` when DOSBox-X starts from this directory. On Windows, use `run-dosbox.ps1 -DosBoxPath <path-to-dosbox-x>`. On Termux, use `../run-termux.sh` with Termux X11.
+Run with **DOSBox-X** and the `machine=svga_s3` setting. The program sets custom vertical timing for 88 rows of 8 scanlines. `dosbox.conf` supplies the emulator settings and starts `INVADERS.COM` when DOSBox-X starts from this directory. On Windows, use `run-dosbox.ps1 -DosBoxPath <path-to-dosbox-x>`. On Termux, use `../run-termux.sh` with Termux X11.
 
 ## Controls and behavior
 
@@ -31,7 +31,7 @@ Run with **DOSBox-X** and the `machine=svga_s3` setting. The game uses custom ve
 
 The menu offers Easy, Normal, and Hard. Easy starts with five lives and lengthens enemy movement and firing delays by 50 percent. Normal starts with three lives and uses the stage delays. Hard starts with two lives and shortens both enemy delays by 25 percent.
 
-The Chef fires the full 12 by 16 cleaver design with Space and the full 12 by 16 rolling pin with X. Three player shots can be active at once, and the weapons share a cooldown. Cleavers fire every 24 game ticks and rolling pins every 40 ticks. Both travel three rows per update.
+The Chef fires the full 12 by 16 cleaver design with Space and the full 12 by 16 rolling pin with X. Three player shots can be active at once, and the weapons share a cooldown. Cleavers fire every 24 game ticks and rolling pins every 40 ticks. Both travel two rows per update so shots stay visible long enough to overlap their firing cooldowns.
 
 Each enemy defeat has a one-in-four chance to drop the document's 14 by 18 fireball when no pickup is already falling. It falls one row every 200 milliseconds. Catching a green fireball increases movement speed. Catching a red fireball adds one damage per shot. Catching a yellow fireball shortens cooldowns and adds a second cleaver to each shot. Each effect lasts 80 game ticks. Distinct effects can overlap, and another pickup refreshes the timer. `activate_player_powerup` remains available to modules that need to activate all three effects together.
 

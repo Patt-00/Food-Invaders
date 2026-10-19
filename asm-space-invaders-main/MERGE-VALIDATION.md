@@ -63,3 +63,21 @@ DOSBox-X 2026.10.01 with a 386 CPU ran `RUNTEST.BAT` on both the normal and dyna
 `tests/integrated-binary-hashes.json` records the game and core-test hashes for this verification. The earlier `tests/binary-hashes.json` remains paired with the 17 October record.
 
 `build.ps1 -Test` ran under PowerShell 7.6.6 on Fedora 44 for both CPU cores, using a temporary adapter to the installed DOSBox-X Flatpak. The wrapper's headless `-silent` invocation passed all three suites and recorded the results above. The Windows-specific PowerShell/DOSBox-X path was not tested on Windows.
+
+## Follow-up: 3:2 gameplay viewport
+
+The game uses 132 columns and 88 rows. DOSBox-X displays eight scanlines per character row, so the logical field is 1,056 by 704 pixels. The artwork remains at the documented cell dimensions.
+
+The front enemy band starts at row 3 and spans 21 rows. The rear band starts at row 29 and spans 22 rows. Compile-time checks reject overlapping bands, lanes narrower than the 22-cell cupcake, and a rear band that reaches the player's full-size weapon spawn row. Player weapons advance two rows per tick so a cleaver remains visible longer than its 24-tick cooldown in the shorter field.
+
+NASM 3.02 built the following files with warnings treated as errors:
+
+| Binary | Bytes |
+| --- | ---: |
+| `INVADERS.COM` | 33,153 |
+| `TEST.COM` | 45,828 |
+| `PBTEST.COM` | 46,721 |
+| `COLLTEST.COM` | 22,781 |
+| `WINTEST.COM` | 45,844 |
+
+DOSBox-X 2026.10.01 passed `RUNTEST.BAT` on normal and dynamic 386 cores. `TEST.COM` passed 40,302 assertions, and the player and collision suites passed on both cores. The current game and core-test hashes are in `tests/integrated-binary-hashes.json`. The live window loaded the 88-row mode; a new screenshot and user review of the updated proportions remain outstanding.

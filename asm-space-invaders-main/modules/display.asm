@@ -2,7 +2,7 @@
 %include "assets/bullet_art.inc"
 %include "assets/feature_art.inc"
 
-; Text-mode renderer: one 132x120 back buffer, copied to B800h once per frame.
+; Text-mode renderer: one 132x88 back buffer, copied to B800h once per frame.
 ; Movement/collision/drawing share type widths/heights. No Windows pixels.
 ; All routines preserve full general-purpose registers unless noted.
 buffer_guard_before dd 0A5C33C5Ah
@@ -91,18 +91,18 @@ initialize_display:
     pop ax
     ret
 
-; 960 visible scanlines = 120 rows * 8 pixels. 1023 total scanlines
+; 704 visible scanlines = 88 rows * 8 pixels. 760 total scanlines
 ; leave room for blanking/retrace. Overflow bits encode scanlines 8 and 9.
 ; Max-scanline retains eight-pixel glyphs and disables double scanning.
 tall_display_timing:
-    dw 0FD06h                ; Vertical total = 1023 (register stores total-2).
-    dw 0FF07h                ; Vertical overflow bits; line compare > raster.
+    dw 0F606h                ; Vertical total = 760 (register stores total-2).
+    dw 0F007h                ; Overflow bits; line compare stays below the raster limit.
     dw 06709h                ; Eight glyph scanlines; blank/line-compare overflow.
-    dw 0BF12h                ; Last visible scanline = 959 (03BFh).
-    dw 0D410h                ; Vertical retrace starts at scanline 980.
-    dw 02811h                ; Retrace ends at 984; timing registers unlocked.
-    dw 0C015h                ; Vertical blank starts at scanline 960.
-    dw 0FF16h                ; Vertical blank ends at the end of the raster.
+    dw 0BF12h                ; Last visible scanline = 703 (02BFh).
+    dw 0D010h                ; Vertical retrace starts at scanline 720.
+    dw 02411h                ; Retrace ends at 724; timing registers unlocked.
+    dw 0C015h                ; Vertical blank starts at scanline 704.
+    dw 0F716h                ; Vertical blank ends at the final raster line, 759.
     dw 0FF18h                ; Line compare = 1023, avoiding a split screen.
 tall_display_timing_end:
 

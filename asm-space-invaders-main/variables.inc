@@ -1,7 +1,7 @@
 ; Shared game data and constants.  This file is included once by main.asm.
 
 SCREEN_WIDTH    equ 132
-SCREEN_HEIGHT   equ 120
+SCREEN_HEIGHT   equ 88
 PLAYFIELD_TOP   equ 1        ; Row zero belongs to the HUD.
 PLAYER_WIDTH    equ 12
 PLAYER_HEIGHT   equ 16
@@ -9,7 +9,7 @@ SOURCE_ART_WIDTH equ 12
 SOURCE_ART_HEIGHT equ 16
 WEAPON_WIDTH    equ SOURCE_ART_WIDTH
 WEAPON_HEIGHT   equ SOURCE_ART_HEIGHT
-BULLET_SPEED    equ 3        ; Rows per update; independent of firing cooldown.
+BULLET_SPEED    equ 2        ; Keeps a shot in the shorter viewport through its cooldown.
 HOSTILE_SHOT_WIDTH equ 2
 HOSTILE_SHOT_HEIGHT equ 2
 HOSTILE_SHOT_STEP_MS equ 200 ; Enemy shots advance more slowly than each 50 ms game tick.
@@ -19,8 +19,8 @@ PLAYER_DANGER_X equ (PLAYER_WIDTH - PLAYER_DANGER_WIDTH) / 2
 PLAYER_DANGER_Y equ (PLAYER_HEIGHT - PLAYER_DANGER_HEIGHT) / 2
 
 ; VGA 32 KiB text memory and 8-bit coordinates bound this display mode.
-%if SCREEN_WIDTH != 132 || SCREEN_HEIGHT != 120
-    %error "Display timing is configured for 132x120 cells"
+%if SCREEN_WIDTH != 132 || SCREEN_HEIGHT != 88
+    %error "Display timing is configured for 132x88 cells"
 %endif
 %if SCREEN_WIDTH * SCREEN_HEIGHT * 2 > 32768
     %error "Text frame must fit in VGA text memory"
@@ -69,11 +69,21 @@ ENEMY_HEIGHT    equ 16       ; Tallest food enemy source design.
 ENEMY_LANE_COUNT equ 5
 ENEMY_LANE_WIDTH equ (SCREEN_WIDTH / ENEMY_LANE_COUNT)
 ENEMY_FRONT_TOP equ 3
-ENEMY_FRONT_BAND_HEIGHT equ 40
-ENEMY_REAR_TOP equ 44
-ENEMY_REAR_BAND_HEIGHT equ 66
+ENEMY_FRONT_BAND_HEIGHT equ 21
+ENEMY_REAR_TOP equ 29
+ENEMY_REAR_BAND_HEIGHT equ 22
 BOSS_MIN_Y equ 2
 BOSS_Y_RANGE equ 21
+
+%if ENEMY_LANE_WIDTH < ENEMY_WIDTH
+    %error "Enemy lanes must fit the widest ASCII design"
+%endif
+%if ENEMY_FRONT_TOP + ENEMY_FRONT_BAND_HEIGHT > ENEMY_REAR_TOP
+    %error "Regular enemy bands must not overlap"
+%endif
+%if ENEMY_REAR_TOP + ENEMY_REAR_BAND_HEIGHT > SCREEN_HEIGHT - PLAYER_HEIGHT - 1 - WEAPON_HEIGHT
+    %error "Rear enemies must leave room for a full-size player shot"
+%endif
 
 %define LEFT 0
 %define RIGHT SCREEN_WIDTH

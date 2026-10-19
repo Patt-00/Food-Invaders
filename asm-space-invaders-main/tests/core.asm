@@ -16,6 +16,7 @@ TEST_PLAYER_X equ (SCREEN_WIDTH-PLAYER_WIDTH)/2
 TEST_PLAYER_Y equ SCREEN_HEIGHT-PLAYER_HEIGHT-1
 TEST_MENU_X equ (SCREEN_WIDTH-80)/2
 TEST_MENU_Y equ (SCREEN_HEIGHT-25)/2
+TEST_CUPCAKE_Y equ ENEMY_FRONT_TOP+(ENEMY_FRONT_BAND_HEIGHT-SOURCE_ART_HEIGHT)/2
 ; Assertions exercise compiled game routines, not a reimplementation/model.
 %macro check 3
  cmp %1,%2
@@ -43,6 +44,8 @@ tests_start:
  check byte [player_lives],3,'starting lives'
  check dword [enemies+2*E_SIZE+E_HP],2,'burger HP'
  check dword [enemies+4*E_SIZE+E_HP],2,'pizza HP'
+ check dword [enemies+E_Y],ENEMY_FRONT_TOP+(ENEMY_FRONT_BAND_HEIGHT-SOURCE_ART_HEIGHT)/2,'front enemies fit the 3:2 viewport'
+ check dword [enemies+5*E_SIZE+E_Y],ENEMY_REAR_TOP+(ENEMY_REAR_BAND_HEIGHT-SOURCE_ART_HEIGHT)/2,'rear enemies stay clear of the front band'
  ; A cleared wave must not inherit elapsed movement or firing time.
  mov dword [enemy_move_timers],0A1B2C3D4h
  mov dword [enemy_move_timers+(MAX_ENEMIES-1)*4],012345678h
@@ -244,7 +247,8 @@ tests_start:
 .first_check_pizza:
  check eax,117,'first random shooter is an unblocked bottom enemy'
 .first_bottom_shooter_ok:
- check dword [shots+S_Y],85,'shot starts below full-size source sprite'
+ mov eax,ENEMY_REAR_TOP+((ENEMY_REAR_BAND_HEIGHT-SOURCE_ART_HEIGHT)/2)+SOURCE_ART_HEIGHT
+ check dword [shots+S_Y],eax,'shot starts below full-size source sprite'
  call fire_enemy
  mov eax,[shots+S_SIZE+S_X]
  cmp eax,91
@@ -254,7 +258,8 @@ tests_start:
 .second_check_pizza:
  check eax,117,'second random shooter is an unblocked bottom enemy'
 .second_bottom_shooter_ok:
- check dword [shots+S_SIZE+S_Y],85,'second bottom shot starts below full-size source sprite'
+ mov eax,ENEMY_REAR_TOP+((ENEMY_REAR_BAND_HEIGHT-SOURCE_ART_HEIGHT)/2)+SOURCE_ART_HEIGHT
+ check dword [shots+S_SIZE+S_Y],eax,'second bottom shot starts below full-size source sprite'
  ; Single life loss when multiple sources coincide; preserve survivors HP.
  call solo
  mov dword [enemies+E_X],TEST_PLAYER_X
@@ -440,12 +445,12 @@ tests_start:
  call verify_enemy_art_collection
  call initialize_game
  call draw_game
- check word [back_buffer+(15*SCREEN_WIDTH+10)*2],0D23h,'full-size cupcake art drawn with color'
+ check word [back_buffer+(TEST_CUPCAKE_Y*SCREEN_WIDTH+10)*2],0D23h,'full-size cupcake art drawn with color'
  check word [back_buffer+(TEST_PLAYER_Y*SCREEN_WIDTH+TEST_PLAYER_X+2)*2],0F23h,'chef drawn in player area'
  push es
  mov ax,0B800h
  mov es,ax
- mov ax,[es:(15*SCREEN_WIDTH+10)*2]
+ mov ax,[es:(TEST_CUPCAKE_Y*SCREEN_WIDTH+10)*2]
  pop es
  check ax,0D23h,'VGA memory contains rendered cupcake artwork'
  mov byte [pickup_active],1

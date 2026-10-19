@@ -64,9 +64,9 @@ quit_program:
 
 ; -------------------------------------------------
 ; Procedure: initialize_program
-; Purpose: Initialize the 132x120 SVGA text battlefield.
+; Purpose: Initialize the 132x88 SVGA text battlefield.
 ; Input: None
-; Output: Screen is in 132x120 text mode; cursor is hidden.
+; Output: Screen is in 132x88 text mode; cursor is hidden.
 ; Modifies: Flags on success; exits DOS on unsupported video.
 ; Shared variables used: None
 ; -------------------------------------------------

@@ -1,4 +1,4 @@
-> Historical enemy-branch report: this document describes the pre-merge 80×25 version. See [README.md](README.md) and [MERGE-VALIDATION.md](MERGE-VALIDATION.md) for the integrated 132×120 game and its validation.
+> Historical enemy-branch report: this document describes the pre-merge 80×25 version. See [README.md](README.md) and [MERGE-VALIDATION.md](MERGE-VALIDATION.md) for the current 132×88 game and its validation.
 
 # Food Invaders DOSBox implementation and test report
 

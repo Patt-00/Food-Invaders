@@ -49,9 +49,9 @@ start:
     mov ax, [es:4Ah]
     expect_reg ax, SCREEN_WIDTH, 'BIOS reports the full battlefield width'
     mov al, [es:84h]
-    expect_reg al, SCREEN_HEIGHT - 1, 'BIOS reports 120 rows'
+    expect_reg al, SCREEN_HEIGHT - 1, 'BIOS reports all configured text rows'
     mov ax, [es:4Ch]
-    expect_reg ax, 8000h, 'BIOS page includes the full 120-row frame'
+    expect_reg ax, 8000h, 'BIOS page covers the configured frame'
     push ds
     pop es
     call initialize_player
@@ -124,7 +124,7 @@ start:
     mov byte [player_x], 0
     call update_bullets
     expect bullet_x, (SCREEN_WIDTH - WEAPON_WIDTH) / 2, 'projectile independent of moving chef'
-    expect bullet_y, SCREEN_HEIGHT - PLAYER_HEIGHT - WEAPON_HEIGHT - 1 - BULLET_SPEED, 'projectile moves three rows per frame'
+    expect bullet_y, SCREEN_HEIGHT - PLAYER_HEIGHT - WEAPON_HEIGHT - 1 - BULLET_SPEED, 'projectile advances by the configured step'
     expect fire_cooldown, NORMAL_COOLDOWN - 1, 'cooldown ticks each frame'
     mov cx, NORMAL_COOLDOWN - 1
     call tick_bullets
@@ -444,7 +444,7 @@ start:
     call check_bullet_enemy
     expect_word score, 10, 'dead enemy cannot award score twice'
 
-    ; A full-size cleaver moves upward and hits the target after two updates.
+    ; A full-size cleaver moves upward and reaches the target after three updates.
     call initialize_player
     call initialize_bullets
     mov byte [game_state], PLAYING
@@ -460,13 +460,16 @@ start:
     call check_bullet_enemy
     expect enemy_health, INITIAL_ENEMY_HEALTH, 'distant shot has not hit yet'
     call update_bullets
-    expect bullet_y, 21, 'first full-size projectile step moves three rows'
+    expect bullet_y, 22, 'first full-size projectile step moves two rows'
     expect enemy_health, INITIAL_ENEMY_HEALTH, 'projectile remains short of the target'
     call update_bullets
-    expect bullet_y, 18, 'second full-size projectile step moves three rows'
+    expect bullet_y, 20, 'second full-size projectile step moves two rows'
+    expect enemy_health, INITIAL_ENEMY_HEALTH, 'second full-size step is still below the target'
+    call update_bullets
+    expect bullet_y, 18, 'third full-size projectile step moves two rows'
     expect enemy_health, INITIAL_ENEMY_HEALTH - 1, 'full-size cleaver hits for one damage'
     expect bullet_active, 0, 'fast hit consumes its projectile'
-    expect fire_cooldown, NORMAL_COOLDOWN - 2, 'speed does not accelerate cooldown ticking'
+    expect fire_cooldown, NORMAL_COOLDOWN - 3, 'speed does not accelerate cooldown ticking'
     expect_word score, 0, 'fast shot does not award premature score'
     call initialize_bullets
     call fire_secondary

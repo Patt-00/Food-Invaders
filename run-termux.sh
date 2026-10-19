@@ -8,7 +8,7 @@ export SDL_VIDEODRIVER=x11
 export SDL_AUDIODRIVER=dummy
 
 if ! command -v dosbox-x >/dev/null 2>&1; then
-    echo "Install DOSBox-X for the 132x120 battlefield: pkg install dosbox-x" >&2
+    echo "Install DOSBox-X for the 132x88 battlefield: pkg install dosbox-x" >&2
     exit 1
 fi
 
@@ -33,7 +33,7 @@ am start -n com.termux.x11/.MainActivity >/dev/null 2>&1 || true
 # 1080-pixel short edge. Software output avoids SDL2/OpenGL resize issues.
 set -- $(xdpyinfo -display "$DISPLAY" | awk '/dimensions:/ {split($2, size, "x"); print size[1], size[2]; exit}')
 window_width=1056
-window_height=960
+window_height=704
 window_left=$((($1 - window_width) / 2))
 window_top=$((($2 - window_height) / 2))
 if [ "$window_left" -lt 0 ]; then window_left=0; fi
@@ -71,7 +71,7 @@ if command -v xdotool >/dev/null 2>&1; then
     while kill -0 "$emulator_pid" 2>/dev/null && [ "$attempts" -lt 30 ]; do
         window_id=$(xdotool search --pid "$emulator_pid" --name DOSBox 2>/dev/null | head -n 1 || true)
         if [ -n "$window_id" ] && xdotool getwindowgeometry --shell "$window_id" 2>/dev/null |
-            awk -F= '/^WIDTH=/ {w=$2} /^HEIGHT=/ {h=$2} END {exit !(w==1056 && h==960)}'; then
+            awk -F= '/^WIDTH=/ {w=$2} /^HEIGHT=/ {h=$2} END {exit !(w==1056 && h==704)}'; then
             sleep 0.3
             xdotool windowunmap "$window_id" windowmap "$window_id" windowfocus "$window_id" || true
             break
