@@ -4,3 +4,4 @@ RESULT.TXT
 *.log
 *-preview.png
 asm-space-invaders-main/capture/
+.codex-build/

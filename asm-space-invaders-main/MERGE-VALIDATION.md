@@ -81,3 +81,13 @@ NASM 3.02 built the following files with warnings treated as errors:
 | `WINTEST.COM` | 45,844 |
 
 DOSBox-X 2026.10.01 passed `RUNTEST.BAT` on normal and dynamic 386 cores. `TEST.COM` passed 40,302 assertions, and the player and collision suites passed on both cores. The current game and core-test hashes are in `tests/integrated-binary-hashes.json`. The live window loaded the 88-row mode; a new screenshot and user review of the updated proportions remain outstanding.
+
+## Follow-up: menu preview and formation placement
+
+The main menu draws all ten source designs at their existing cell dimensions: five regular enemies, Ratatouille, Chef, cleaver, rolling pin, and fireball. It labels the designs and places controls, difficulty, stage, and boss information below the preview. `tests/core.asm` checks one rendered cell from each design, as well as the title and difficulty text.
+
+The regular enemy bands now begin at rows 5 and 32. Ratatouille selects vertical targets beginning at row 6. The 132 by 88 viewport, full-size assets, and player start position remain unchanged.
+
+NASM 3.02 rebuilt the game and test binaries with warnings treated as errors. DOSBox-X 2026.10.01 ran `RUNTEST.BAT` on normal and dynamic 386 cores. `TEST.COM` passed 40,312 assertions on each core. `PBTEST.COM` and `COLLTEST.COM` also reported PASS on both cores. All COM files remain below 60,000 bytes. The current game and core-test hashes are recorded in `tests/integrated-binary-hashes.json`.
+
+A live DOSBox-X window showed the revised title screen and gameplay. The start key, one movement input, and one weapon input were sent. The screen changed to gameplay, the Chef moved, and the weapon cooldown changed to `WAIT`. The updated screen was captured through the desktop screenshot tool. Group review and acceptance of the proportions remain outstanding.

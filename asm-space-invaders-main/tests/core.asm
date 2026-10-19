@@ -16,6 +16,8 @@ TEST_PLAYER_X equ (SCREEN_WIDTH-PLAYER_WIDTH)/2
 TEST_PLAYER_Y equ SCREEN_HEIGHT-PLAYER_HEIGHT-1
 TEST_MENU_X equ (SCREEN_WIDTH-80)/2
 TEST_MENU_Y equ (SCREEN_HEIGHT-25)/2
+TEST_MENU_TITLE_X equ (SCREEN_WIDTH-title_art_width)/2
+TEST_MENU_DIFFICULTY_X equ (SCREEN_WIDTH-difficulty_text_width)/2
 TEST_CUPCAKE_Y equ ENEMY_FRONT_TOP+(ENEMY_FRONT_BAND_HEIGHT-SOURCE_ART_HEIGHT)/2
 ; Assertions exercise compiled game routines, not a reimplementation/model.
 %macro check 3
@@ -410,8 +412,18 @@ tests_start:
  check byte [game_state],QUIT,'original escape quit interface'
  call initialize_game
  call show_main_menu
- check word [back_buffer+((4+TEST_MENU_Y)*SCREEN_WIDTH+24+TEST_MENU_X)*2],0A46h,'Food Invaders menu title'
- check word [back_buffer+((17+TEST_MENU_Y)*SCREEN_WIDTH+22+TEST_MENU_X)*2],0F44h,'menu explains selectable difficulty'
+ check word [back_buffer+(MENU_TITLE_ROW*SCREEN_WIDTH+TEST_MENU_TITLE_X)*2],0A46h,'Food Invaders menu title'
+ check word [back_buffer+(MENU_DIFFICULTY_ROW*SCREEN_WIDTH+TEST_MENU_DIFFICULTY_X)*2],0E44h,'menu explains selectable difficulty'
+ check word [back_buffer+(MENU_ENEMY_ROW*SCREEN_WIDTH+10)*2],0D23h,'menu previews cupcake ASCII art'
+ check word [back_buffer+(MENU_ENEMY_ROW*SCREEN_WIDTH+35)*2],0E23h,'menu previews fries ASCII art'
+ check word [back_buffer+((MENU_ENEMY_ROW+(16-11)/2)*SCREEN_WIDTH+59)*2],0B23h,'menu previews burger ASCII art'
+ check word [back_buffer+(MENU_ENEMY_ROW*SCREEN_WIDTH+87)*2],0C23h,'menu previews hotdog ASCII art'
+ check word [back_buffer+(MENU_ENEMY_ROW*SCREEN_WIDTH+111)*2],0A23h,'menu previews pizza ASCII art'
+ check word [back_buffer+(MENU_SHOWCASE_ROW*SCREEN_WIDTH+16)*2],0F23h,'menu previews Ratatouille ASCII art'
+ check word [back_buffer+(MENU_SHOWCASE_ROW*SCREEN_WIDTH+44)*2],0B23h,'menu previews cleaver ASCII art'
+ check word [back_buffer+(MENU_SHOWCASE_ROW*SCREEN_WIDTH+62)*2],0F23h,'menu previews Chef ASCII art'
+ check word [back_buffer+(MENU_SHOWCASE_ROW*SCREEN_WIDTH+85)*2],0E23h,'menu previews rolling pin ASCII art'
+ check word [back_buffer+((MENU_SHOWCASE_ROW-1)*SCREEN_WIDTH+109)*2],0E23h,'menu previews fireball ASCII art'
  mov ah,05h
  mov cx,0231h                 ; BIOS enqueue '1': Easy.
  int 16h

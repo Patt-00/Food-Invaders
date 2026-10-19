@@ -1,6 +1,6 @@
 # Food Invaders
 
-A 16-bit NASM game for 386-compatible real-mode DOS. `main.asm` renders colored ASCII in a 132 by 88 SVGA text screen. Eight-pixel cells produce a 1056 by 704 gameplay field with a 3:2 ratio. The playable build uses all ten ASCII designs from the team document: the Chef, five food enemies, Ratatouille, two weapons, and the fireball pickup.
+A 16-bit NASM game for 386-compatible real-mode DOS. `main.asm` renders colored ASCII in a 132 by 88 SVGA text screen. Eight-pixel cells produce a 1056 by 704 gameplay field with a 3:2 ratio. The playable build uses all ten ASCII designs from the team document: the Chef, five food enemies, Ratatouille, two weapons, and the fireball pickup. The main menu previews all ten designs at their source cell dimensions.
 
 ## Build and run
 
@@ -35,7 +35,7 @@ The Chef fires the full 12 by 16 cleaver design with Space and the full 12 by 16
 
 Each enemy defeat has a one-in-four chance to drop the document's 14 by 18 fireball when no pickup is already falling. It falls one row every 200 milliseconds. Catching a green fireball increases movement speed. Catching a red fireball adds one damage per shot. Catching a yellow fireball shortens cooldowns and adds a second cleaver to each shot. Each effect lasts 80 game ticks. Distinct effects can overlap, and another pickup refreshes the timer. `activate_player_powerup` remains available to modules that need to activate all three effects together.
 
-The five food enemies use their documented source dimensions: the cupcake is 22 by 16, fries, hotdog, and pizza are 14 by 16, and the burger is 14 by 11. Ratatouille is 15 by 16. Each regular enemy gets a random destination, a movement delay, and, for hotdogs and pizzas, a separate firing timer. Five 26-cell columns and two vertical bands keep the full designs readable without sprite overlap. The boss moves across the screen. Clearing four stages leads to the 20-HP Ratatouille boss. Defeating it produces victory. Contact, hostile fire, and bottom breaches aggregate to at most one life loss per tick. Surviving enemies retain health and reset positions after a hit. The Chef receives one second of invulnerability. Life loss takes priority over a simultaneous stage clear.
+The five food enemies use their documented source dimensions: the cupcake is 22 by 16, fries, hotdog, and pizza are 14 by 16, and the burger is 14 by 11. Ratatouille is 15 by 16. Each regular enemy gets a random destination, a movement delay, and, for hotdogs and pizzas, a separate firing timer. Five 26-cell columns and two vertical bands keep the full designs readable without sprite overlap. The front band starts at row 5 and the rear band at row 32. The boss moves across the screen and selects vertical targets beginning at row 6. Clearing four stages leads to the 20-HP Ratatouille boss. Defeating it produces victory. Contact, hostile fire, and bottom breaches aggregate to at most one life loss per tick. Surviving enemies retain health and reset positions after a hit. The Chef receives one second of invulnerability. Life loss takes priority over a simultaneous stage clear.
 
 Hostile shots use visible 2×2 red markers, move one row every 200 ms, and damage a 4×6 area at the center of the Chef. Each shot interval is randomized within a stage-dependent range so enemies do not create a steady synchronized stream.
 
