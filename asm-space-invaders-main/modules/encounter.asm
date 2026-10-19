@@ -11,6 +11,7 @@ simulate_tick:
  call update_enemies
  call check_collisions
  call resolve_game_events
+ call update_features
 .done:
  popad
  ret

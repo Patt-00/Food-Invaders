@@ -24,9 +24,10 @@ start:
 
 main_menu:
     call show_main_menu
-    call wait_for_menu_input       ; AL = 1 for play, 2 for quit.
-    cmp al, 2
+    call wait_for_menu_input       ; AL = difficulty 1..3, or zero to quit.
+    test al, al
     je quit_program
+    mov [difficulty_level], al
 
 new_game:
     call initialize_game
@@ -36,7 +37,6 @@ game_loop:
     cmp byte [game_state], QUIT
     je quit_program
     call simulate_tick
-    call update_features
     call draw_game
     call wait_frame
 
@@ -52,7 +52,7 @@ game_loop:
 won_game:
     call show_victory
 result_input:
-    call wait_for_menu_input       ; R/Space starts over; Q/Esc quits.
+    call wait_for_result_input     ; R/Space or 1..3 restarts; Q/Esc quits.
     cmp al, 1
     je new_game
 
@@ -89,7 +89,7 @@ video_error_text db 'Food Invaders requires DOSBox-X with SVGA S3 video.', 13, 1
 ; Procedure: initialize_game
 ; Purpose: Reset all shared state for a new game.
 ; Input: None
-; Output: A fresh Food Invaders formation, score/lives/stage reset.
+; Output: A fresh Food Invaders formation with selected difficulty and reset score.
 ; Modifies: Flags only; all general-purpose registers preserved.
 ; Shared variables used: All game state variables
 ; -------------------------------------------------
@@ -101,9 +101,9 @@ initialize_game:
     mov dword [current_wave], 1
     mov dword [invulnerable], 0
     mov dword [loss_pending], 0
-    mov byte [shield_active], 0
     mov byte [powerup_active], 0
     mov byte [game_state], PLAYING
+    call initialize_features
     call seed_random
     call initialize_enemies
     popad

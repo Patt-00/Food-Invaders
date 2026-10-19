@@ -8,6 +8,7 @@ jmp start
 %include "modules/player.asm"
 %include "modules/bullet.asm"
 %include "modules/enemy.asm"
+%include "modules/features.asm"
 %include "modules/collision.asm"
 %include "modules/display.asm"
 %include "assets/source_art.inc"
@@ -113,8 +114,8 @@ start:
     call initialize_player
     call fire_bullet
     expect bullet_active, 1, 'primary allocates first slot'
-    expect bullet_x, (SCREEN_WIDTH - WEAPON_WIDTH) / 2, 'cleaver centered relative to chef'
-    expect bullet_y, SCREEN_HEIGHT - PLAYER_HEIGHT - WEAPON_HEIGHT - 1, 'smaller weapon starts above chef'
+    expect bullet_x, (SCREEN_WIDTH - WEAPON_WIDTH) / 2, 'cleaver art centered relative to chef'
+    expect bullet_y, SCREEN_HEIGHT - PLAYER_HEIGHT - WEAPON_HEIGHT - 1, 'full-size weapon starts above chef'
     expect bullets_kind, CLEAVER, 'primary weapon kind'
     expect bullets_damage, 1, 'normal cleaver damage'
     expect fire_cooldown, NORMAL_COOLDOWN, 'normal firing cooldown'
@@ -133,8 +134,8 @@ start:
     expect bullets_kind + 1, ROLLING_PIN, 'secondary kind'
     expect bullets_damage + 1, 2, 'secondary damage'
     expect fire_cooldown, SECONDARY_COOLDOWN, 'stronger weapon fires more slowly'
-    expect bullets_x + 1, (PLAYER_WIDTH - WEAPON_WIDTH) / 2, 'left-edge shot fits screen'
-    expect bullet_x, (SCREEN_WIDTH - WEAPON_WIDTH) / 2, 'existing shot not overwritten'
+    expect bullets_x + 1, (PLAYER_WIDTH - WEAPON_WIDTH) / 2, 'full-size rolling pin fits at left edge'
+    expect bullet_x, (SCREEN_WIDTH - WEAPON_WIDTH) / 2, 'existing full-size shot not overwritten'
     mov byte [fire_cooldown], 0
     call fire_bullet
     expect bullets_active + 2, 1, 'third slot allocated'
@@ -152,7 +153,7 @@ start:
     expect bullets_kind, CLEAVER, 'invalid removal cannot touch adjacent memory'
     mov byte [player_x], SCREEN_WIDTH - PLAYER_WIDTH
     call fire_secondary
-    expect bullets_x + 1, SCREEN_WIDTH - PLAYER_WIDTH + (PLAYER_WIDTH - WEAPON_WIDTH) / 2, 'right-edge smaller weapon stays centered on chef'
+    expect bullets_x + 1, SCREEN_WIDTH - PLAYER_WIDTH + (PLAYER_WIDTH - WEAPON_WIDTH) / 2, 'full-size weapon stays centered on chef at right edge'
     call initialize_bullets
     expect bullet_active, 0, 'restart clears first slot'
     expect bullets_active + 1, 0, 'restart clears second slot'
@@ -256,6 +257,118 @@ start:
     expect_word player_boost_frames, 0, 'restart clears boost timer'
     expect powerup_active, 0, 'restart clears boost flag'
 
+    ; Each falling pickup changes only its advertised player statistic.
+    mov byte [game_state], PLAYING
+    mov byte [player_x], 20
+    mov al, POWERUP_SPEED
+    call activate_powerup_type
+    expect player_boost_mask, BOOST_MASK_SPEED, 'speed pickup selects only movement boost'
+    call move_player_right
+    expect player_x, 22, 'speed pickup doubles movement'
+    call initialize_player
+    call initialize_bullets
+    mov byte [game_state], PLAYING
+    mov al, POWERUP_DAMAGE
+    call activate_powerup_type
+    call fire_bullet
+    expect bullets_damage, 2, 'damage pickup strengthens a cleaver'
+    expect fire_cooldown, NORMAL_COOLDOWN, 'damage pickup does not change fire rate'
+    expect bullets_active + 1, 0, 'damage pickup does not create a burst'
+    call initialize_player
+    call initialize_bullets
+    mov byte [game_state], PLAYING
+    mov al, POWERUP_RAPID
+    call activate_powerup_type
+    call fire_bullet
+    expect bullets_damage, 1, 'rapid pickup preserves normal damage'
+    expect fire_cooldown, BOOST_COOLDOWN, 'rapid pickup shortens fire cooldown'
+    expect bullets_active + 1, 1, 'rapid pickup grants the cleaver burst'
+
+    ; A dropped pickup falls, is caught by the Chef, then expires at the floor.
+    call initialize_player
+    call initialize_features
+    mov byte [game_state], PLAYING
+    mov byte [player_x], 20
+    mov byte [player_y], 40
+    mov byte [pickup_active], 1
+    mov byte [pickup_kind], POWERUP_DAMAGE
+    mov byte [pickup_x], 22
+    mov byte [pickup_y], 45
+    call update_features
+    expect pickup_active, 0, 'overlapping pickup is collected'
+    expect powerup_active, 1, 'collection activates a temporary boost'
+    expect player_boost_mask, BOOST_MASK_DAMAGE, 'collection applies the selected effect'
+    expect_word player_boost_frames, BOOST_FRAMES, 'collection starts the boost timer'
+    call initialize_player
+    call initialize_features
+    mov byte [game_state], PLAYING
+    mov byte [player_x], 0
+    mov byte [player_y], 30
+    mov byte [pickup_active], 1
+    mov byte [pickup_x], 100
+    mov byte [pickup_y], 20
+    mov byte [pickup_move_timer], PICKUP_STEP_TICKS-1
+    call update_features
+    expect pickup_y, 21, 'uncollected pickup falls one row per 200 ms'
+    expect pickup_active, 1, 'falling pickup remains active in the arena'
+    mov byte [pickup_y], SCREEN_HEIGHT-1
+    mov byte [pickup_move_timer], PICKUP_STEP_TICKS-1
+    call update_features
+    expect pickup_active, 0, 'uncaught pickup expires below the playfield'
+
+    ; Enemy defeats create occasional pickups at the defeated enemy position.
+    call initialize_features
+    mov byte [game_state], PLAYING
+    mov dword [random_state], 1
+    mov dword [enemies+E_TYPE], 2
+    mov dword [enemies+E_X], 20
+    mov dword [enemies+E_Y], 30
+    mov esi, enemies
+    call maybe_drop_powerup
+    expect pickup_active, 1, 'random enemy drop creates a pickup'
+    expect pickup_x, 20, 'full-size fireball centers under the defeated enemy'
+    expect pickup_y, 41, 'falling fireball begins below the full-size enemy'
+    mov byte [pickup_kind], POWERUP_DAMAGE
+    mov dword [random_state], 1
+    call maybe_drop_powerup
+    expect pickup_kind, POWERUP_DAMAGE, 'active pickup is not overwritten'
+    call initialize_features
+    mov dword [random_state], 0
+    call maybe_drop_powerup
+    expect pickup_active, 0, 'random drop chance can leave no pickup'
+    mov dword [enemies+E_TYPE], 0
+
+    ; A real lethal player shot triggers the drop path, and the Chef can collect it.
+    call initialize_features
+    call initialize_bullets
+    mov byte [game_state], PLAYING
+    mov dword [score], 0
+    mov dword [random_state], 1
+    mov dword [enemies+E_TYPE], 0
+    mov dword [enemies+E_X], 37
+    mov dword [enemies+E_Y], 4
+    mov dword [enemies+E_HP], 1
+    mov dword [enemies+E_ACTIVE], 1
+    mov dword [alive_count], 1
+    mov dword [enemy_events], 0
+    mov dword [completion_sent], 0
+    mov byte [bullets_x], 32
+    mov byte [bullets_y], 4
+    mov byte [bullets_damage], 1
+    mov byte [bullets_active], 1
+    call check_bullet_enemy
+    expect pickup_active, 1, 'lethal collision may drop a pickup'
+    expect pickup_kind, POWERUP_RAPID, 'drop selects a randomized power-up type'
+    expect_word score, 10, 'pickup drop preserves the enemy reward'
+    mov al, [pickup_x]
+    mov [player_x], al
+    mov al, [pickup_y]
+    mov [player_y], al
+    call update_features
+    expect pickup_active, 0, 'Chef collects a dropped pickup'
+    expect powerup_active, 1, 'collected drop activates its timed effect'
+    expect player_boost_mask, BOOST_MASK_RAPID, 'collected rapid pickup grants rapid fire'
+
     ; A burst at the highest valid firing position must never wrap into the HUD.
     call initialize_bullets
     call activate_player_powerup
@@ -331,7 +444,7 @@ start:
     call check_bullet_enemy
     expect_word score, 10, 'dead enemy cannot award score twice'
 
-    ; Faster travel must still hit the narrow target, with unchanged damage.
+    ; A full-size cleaver moves upward and hits the target after two updates.
     call initialize_player
     call initialize_bullets
     mov byte [game_state], PLAYING
@@ -343,18 +456,17 @@ start:
     mov dword [completion_sent], 0
     mov word [score], 0
     call fire_bullet
-    mov byte [bullet_y], 14
+    mov byte [bullet_y], 24
     call check_bullet_enemy
     expect enemy_health, INITIAL_ENEMY_HEALTH, 'distant shot has not hit yet'
-    mov cx, 3
-.fast_hit:
     call update_bullets
-    call check_bullet_enemy
-    loop .fast_hit
-    expect bullet_y, 5, 'three updates move nine rows'
-    expect enemy_health, INITIAL_ENEMY_HEALTH - 1, 'fast smaller cleaver still hits for one damage'
+    expect bullet_y, 21, 'first full-size projectile step moves three rows'
+    expect enemy_health, INITIAL_ENEMY_HEALTH, 'projectile remains short of the target'
+    call update_bullets
+    expect bullet_y, 18, 'second full-size projectile step moves three rows'
+    expect enemy_health, INITIAL_ENEMY_HEALTH - 1, 'full-size cleaver hits for one damage'
     expect bullet_active, 0, 'fast hit consumes its projectile'
-    expect fire_cooldown, NORMAL_COOLDOWN - 3, 'speed does not accelerate cooldown ticking'
+    expect fire_cooldown, NORMAL_COOLDOWN - 2, 'speed does not accelerate cooldown ticking'
     expect_word score, 0, 'fast shot does not award premature score'
     call initialize_bullets
     call fire_secondary
@@ -463,10 +575,10 @@ start:
     call draw_bullet
     expect_word render_buffer + (2 * SCREEN_WIDTH + 2) * 2, 0E23h, 'rolling pin art drawn in yellow'
     expect_word render_buffer, 0720h, 'weapon avoids HUD row'
-    mov si, expected_pin_sprite
+    mov si, source_rolling_pin_art
     mov di, render_buffer + SCREEN_WIDTH * 2
     mov bl, 0Eh
-    mov dx, pin_render_failed
+    mov dx, rolling_pin_render_failed
     call verify_weapon_sprite
     mov byte [bullets_damage], 3
     call draw_bullet
@@ -474,27 +586,27 @@ start:
     mov byte [bullets_kind], CLEAVER
     mov byte [bullets_damage], 1
     call draw_bullet
-    expect_word render_buffer + (SCREEN_WIDTH + 1) * 2, 0B23h, 'smaller cleaver art drawn in cyan'
-    mov si, expected_cleaver_sprite
+    expect_word render_buffer + (2 * SCREEN_WIDTH + 2) * 2, 0B23h, 'full-size cleaver art drawn in cyan'
+    mov si, source_cleaver_art
     mov di, render_buffer + SCREEN_WIDTH * 2
     mov bl, 0Bh
     mov dx, cleaver_render_failed
     call verify_weapon_sprite
-    expect_word render_buffer + (SCREEN_WIDTH + WEAPON_WIDTH) * 2, 0720h, 'smaller weapon leaves neighboring column clear'
-    expect_word render_buffer + ((PLAYFIELD_TOP + WEAPON_HEIGHT) * SCREEN_WIDTH) * 2, 0720h, 'smaller weapon leaves following row clear'
+    expect_word render_buffer + (SCREEN_WIDTH + WEAPON_WIDTH) * 2, 0720h, 'full-size weapon leaves neighboring column clear'
+    expect_word render_buffer + ((PLAYFIELD_TOP + WEAPON_HEIGHT) * SCREEN_WIDTH) * 2, 0720h, 'full-size weapon leaves following row clear'
     call clear_screen
     mov byte [bullets_kind], ROLLING_PIN
     mov byte [bullets_damage], 2
     mov byte [bullets_x], SCREEN_WIDTH - WEAPON_WIDTH
     mov byte [bullets_y], SCREEN_HEIGHT - WEAPON_HEIGHT - 1
     call draw_bullet
-    mov si, expected_pin_sprite
+    mov si, source_rolling_pin_art
     mov di, render_buffer + ((SCREEN_HEIGHT - WEAPON_HEIGHT - 1) * SCREEN_WIDTH + SCREEN_WIDTH - WEAPON_WIDTH) * 2
     mov bl, 0Eh
-    mov dx, pin_render_failed
+    mov dx, rolling_pin_render_failed
     call verify_weapon_sprite
-    expect_word render_buffer + ((SCREEN_HEIGHT - 2) * SCREEN_WIDTH + SCREEN_WIDTH - 1) * 2, 0E20h, 'smaller weapon fits bottom-right without clipping'
-    expect_word render_buffer + ((SCREEN_HEIGHT - 1) * SCREEN_WIDTH) * 2, 0720h, 'smaller weapon avoids footer at bottom-right'
+    expect_word render_buffer + ((SCREEN_HEIGHT - 2) * SCREEN_WIDTH + SCREEN_WIDTH - 1) * 2, 0E20h, 'full-size weapon fits bottom-right without clipping'
+    expect_word render_buffer + ((SCREEN_HEIGHT - 1) * SCREEN_WIDTH) * 2, 0720h, 'full-size weapon avoids footer at bottom-right'
     call initialize_player
     call initialize_bullets
     mov byte [game_state], PLAYING
@@ -543,7 +655,7 @@ verify_document_sprite:
     add di, (SCREEN_WIDTH - SOURCE_ART_WIDTH) * 2
     loop .row
     ret
-; Compare independent 6x8 silhouette references, including all blank cells.
+; Compare each native 12x16 weapon against the independent document copy.
 verify_weapon_sprite:
     mov cx, WEAPON_HEIGHT
 .row:
@@ -559,15 +671,9 @@ verify_weapon_sprite:
     add di, (SCREEN_WIDTH - WEAPON_WIDTH) * 2
     loop .row
     ret
-expected_cleaver_sprite:
-    db ' #####', '######', '######', ' #####'
-    db '  ### ', '  ### ', '  ### ', '   #  '
-expected_pin_sprite:
-    db ' #### ', '######', '######', '######'
-    db '######', '######', '######', ' #### '
+rolling_pin_render_failed db 'FAIL: full-size rolling pin ASCII art differs from its document design',13,10,'$'
 chef_render_failed db 'FAIL: every chef character and space matches the document',13,10,'$'
-pin_render_failed db 'FAIL: smaller rolling pin silhouette and spacing are correct',13,10,'$'
-cleaver_render_failed db 'FAIL: smaller cleaver silhouette and spacing are correct',13,10,'$'
+cleaver_render_failed db 'FAIL: full-size cleaver ASCII art differs from its document design',13,10,'$'
 
 tick_bullets:
     call update_bullets

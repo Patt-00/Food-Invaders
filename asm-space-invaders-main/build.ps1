@@ -18,7 +18,13 @@ try {
     if ($Test) {
         & $NasmPath -f bin -Wall -w-reloc -Werror -DSELFTEST main.asm -o TEST.COM
         if ($LASTEXITCODE -ne 0) { throw 'Test assembly failed.' }
-        if ((Get-Item TEST.COM).Length -ge 60000) { throw 'Test COM exceeds segment budget.' }
+        & $NasmPath -f bin -Wall -w-reloc -Werror tests/player-bullet.asm -o PBTEST.COM
+        if ($LASTEXITCODE -ne 0) { throw 'Player and weapon test assembly failed.' }
+        & $NasmPath -f bin -Wall -w-reloc -Werror tests/collision.asm -o COLLTEST.COM
+        if ($LASTEXITCODE -ne 0) { throw 'Collision test assembly failed.' }
+        foreach ($testBinary in @('TEST.COM', 'PBTEST.COM', 'COLLTEST.COM')) {
+            if ((Get-Item $testBinary).Length -ge 60000) { throw "$testBinary exceeds segment budget." }
+        }
         if (!$DosBoxPath) {
             $dosBoxCommand = Get-Command dosbox-x -ErrorAction SilentlyContinue
             if ($dosBoxCommand) { $DosBoxPath = $dosBoxCommand.Source }
@@ -28,7 +34,7 @@ try {
         $DosBoxPath = (Resolve-Path -LiteralPath $DosBoxPath).Path
         $testConfig = Join-Path $sourceRoot 'tests/generated-test.conf'
         @('[sdl]','output=surface','[dosbox]','machine=svga_s3','working directory option=noprompt','[cpu]',('core=' + $Core),'cputype=386','cycles=max','[mixer]','nosound=true','[ne2000]','ne2000=false','[autoexec]',('mount c "' + $sourceRoot + '"'),'c:','RUNTEST.BAT') | Set-Content -LiteralPath $testConfig
-        foreach ($generatedFile in @('TESTLOG.TXT','STATUS.TXT')) {
+        foreach ($generatedFile in @('TESTLOG.TXT','PBLOG.TXT','COLLLOG.TXT','STATUS.TXT')) {
             $generatedPath = Join-Path $sourceRoot $generatedFile
             if (Test-Path -LiteralPath $generatedPath) { Remove-Item -LiteralPath $generatedPath }
         }
@@ -39,11 +45,23 @@ try {
             & $DosBoxPath -nopromptfolder -fastlaunch -conf $testConfig 2>&1 | Set-Content -LiteralPath (Join-Path $sourceRoot 'tests/dosbox-host.log')
         } finally { $env:SDL_AUDIODRIVER = $previousAudioDriver }
         if (!(Test-Path -LiteralPath 'STATUS.TXT') -or (Get-Content STATUS.TXT -Raw).Trim() -ne 'PASS') {
-            if (Test-Path -LiteralPath 'TESTLOG.TXT') { Get-Content TESTLOG.TXT }
+            foreach ($testLog in @('TESTLOG.TXT','PBLOG.TXT','COLLLOG.TXT')) {
+                if (Test-Path -LiteralPath $testLog) { Get-Content $testLog }
+            }
             throw 'DOSBox tests did not return PASS. Inspect tests/dosbox-host.log.'
         }
-        Get-Content TESTLOG.TXT
-        Copy-Item -LiteralPath (Join-Path $sourceRoot 'TESTLOG.TXT') -Destination (Join-Path $sourceRoot "tests/$Core-result.txt") -Force
+        $resultPath = Join-Path $sourceRoot "tests/integrated-$Core-result.txt"
+        $testLogs = @('TESTLOG.TXT','PBLOG.TXT','COLLLOG.TXT')
+        foreach ($testLog in $testLogs) {
+            if (!(Test-Path -LiteralPath $testLog) -or !(Select-String -LiteralPath $testLog -Pattern '^PASS' -Quiet) -or (Select-String -LiteralPath $testLog -Pattern '^FAIL' -Quiet)) {
+                throw "DOSBox test output is missing a PASS record: $testLog"
+            }
+        }
+        $versionMatch = Select-String -LiteralPath (Join-Path $sourceRoot 'tests/dosbox-host.log') -Pattern 'DOSBox-X version ([^ ]+)' | Select-Object -First 1
+        $version = if ($versionMatch) { $versionMatch.Matches[0].Groups[1].Value } else { 'unknown version' }
+        "DOSBox-X $version, 386 CPU, $Core core" | Set-Content -LiteralPath $resultPath
+        Get-Content $testLogs | Add-Content -LiteralPath $resultPath
+        Get-Content -LiteralPath $resultPath
     }
     'Built DOSBox real-mode Food Invaders successfully.'
 } finally { Pop-Location }

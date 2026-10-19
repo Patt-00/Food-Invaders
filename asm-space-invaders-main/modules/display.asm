@@ -1,5 +1,6 @@
 %include "assets/player_art.inc"
 %include "assets/bullet_art.inc"
+%include "assets/feature_art.inc"
 
 ; Text-mode renderer: one 132x120 back buffer, copied to B800h once per frame.
 ; Movement/collision/drawing share type widths/heights. No Windows pixels.
@@ -18,11 +19,18 @@ number_buffer times 12 db 0
 hud_score_text db 'SCORE:',0
 hud_lives_text db 'LIVES:',0
 hud_stage_text db 'STAGE:',0
+hud_difficulty_text db 'DIFF:',0
+easy_text db 'EASY',0
+normal_text db 'NORMAL',0
+hard_text db 'HARD',0
 hud_boss_text db 'RATATOUILLE HP:',0
 hud_ready_text db 'READY',0
 hud_wait_text db 'WAIT ',0
 hud_boost_text db 'BOOST',0
-hud_controls_text db 'SPACE: Cleaver  X: Pin  A/D: Move  ESC: Quit',0
+hud_speed_text db 'SPEED',0
+hud_damage_text db 'DAMAGE',0
+hud_rapid_text db 'RAPID',0
+hud_controls_text db 'SPACE: Cleaver  X: Pin  A/D: Move  Catch fireball for boost  ESC: Quit',0
 hud_controls_end:
 
 initialize_display:
@@ -320,64 +328,20 @@ draw_sprite:
 
 ; -------------------------------------------------
 ; Procedure: draw_weapon_sprite
-; Purpose: Reduce unchanged 12x16 weapon art uniformly to 6x8 screen cells.
+; Purpose: Draw the document's full 12x16 weapon design at its native size.
 ; Input: DS:SI=source art, DH=row, DL=column, BL=color.
-; Output: Each 2x2 block keeps its first nonblank source character.
+; Output: Every source character is rendered into one text cell.
 ; Modifies: Flags only; all general-purpose registers preserved.
-; Shared: render_buffer. Chef rendering continues to use draw_sprite.
+; Shared: render_buffer. Chef and enemies use the same rectangle renderer.
 ; -------------------------------------------------
 draw_weapon_sprite:
-    push ax
-    push bx
-    push cx
-    push dx
-    push si
-    push di
-    push bp
-    xor ax, ax
-    mov al, dh
-    mov di, SCREEN_WIDTH
-    push dx
-    mul di
-    pop dx
-    xor dh, dh
-    add ax, dx
-    shl ax, 1
-    mov di, ax
-    mov bp, WEAPON_HEIGHT
-.row:
-    mov cx, WEAPON_WIDTH
-.cell:
-    cmp di, SCREEN_WIDTH * SCREEN_HEIGHT * 2
-    jae .done
-    mov al, [si]
-    cmp al, ' '
-    jne .paint
-    mov al, [si + 1]
-    cmp al, ' '
-    jne .paint
-    mov al, [si + SOURCE_ART_WIDTH]
-    cmp al, ' '
-    jne .paint
-    mov al, [si + SOURCE_ART_WIDTH + 1]
-.paint:
-    mov ah, bl
-    mov [render_buffer + di], ax
-    add di, 2
-    add si, WEAPON_SCALE
-    loop .cell
-    add si, SOURCE_ART_WIDTH ; Skip the other row of each source block.
-    add di, (SCREEN_WIDTH - WEAPON_WIDTH) * 2
-    dec bp
-    jnz .row
-.done:
-    pop bp
-    pop di
-    pop si
-    pop dx
-    pop cx
-    pop bx
-    pop ax
+    pushad
+    movzx eax,dl
+    movzx edx,dh
+    mov ecx,WEAPON_WIDTH
+    mov ebp,WEAPON_HEIGHT
+    call draw_rectangle_art
+    popad
     ret
 
 
@@ -496,6 +460,21 @@ draw_hud:
  mov dl,55
  mov eax,[current_wave]
  call print_number32
+ mov dl,60
+ mov si,hud_difficulty_text
+ call print_string
+ mov dl,66
+ mov si,normal_text
+ cmp byte [difficulty_level],DIFFICULTY_EASY
+ jne .check_hard
+ mov si,easy_text
+ jmp .difficulty
+.check_hard:
+ cmp byte [difficulty_level],DIFFICULTY_HARD
+ jne .difficulty
+ mov si,hard_text
+.difficulty:
+ call print_string
  mov dx,0048h
  mov si,hud_ready_text
  cmp byte [fire_cooldown],0
@@ -507,6 +486,20 @@ draw_hud:
  je .footer
  mov dl,85
  mov si,hud_boost_text
+ cmp byte [player_boost_mask],BOOST_MASK_SPEED
+ jne .check_damage
+ mov si,hud_speed_text
+ jmp .boost_label
+.check_damage:
+ cmp byte [player_boost_mask],BOOST_MASK_DAMAGE
+ jne .check_rapid
+ mov si,hud_damage_text
+ jmp .boost_label
+.check_rapid:
+ cmp byte [player_boost_mask],BOOST_MASK_RAPID
+ jne .boost_label
+ mov si,hud_rapid_text
+.boost_label:
  call print_string
 .footer:
  mov dh,SCREEN_HEIGHT-1
@@ -531,7 +524,32 @@ draw_game:
  call draw_hud
  call draw_enemy
  call draw_bullet
+ call draw_pickup
  call draw_player
  call present_screen
+ popad
+ ret
+
+draw_pickup:
+ pushad
+ cmp byte [pickup_active],0
+ je .done
+ movzx eax,byte [pickup_x]
+ movzx edx,byte [pickup_y]
+ mov esi,art_fireball
+ mov ecx,PICKUP_WIDTH
+ mov ebp,PICKUP_HEIGHT
+ mov ebx,0Eh                ; Yellow marks rapid fire.
+ cmp byte [pickup_kind],POWERUP_SPEED
+ jne .damage
+ mov ebx,0Ah                ; Green marks the movement-speed pickup.
+ jmp .draw
+.damage:
+ cmp byte [pickup_kind],POWERUP_DAMAGE
+ jne .draw
+ mov ebx,0Ch                ; Red marks the damage pickup.
+.draw:
+ call draw_rectangle_art
+.done:
  popad
  ret

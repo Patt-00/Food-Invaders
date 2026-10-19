@@ -37,13 +37,18 @@ check_bullet_enemy:
  cmp ecx,eax
  jge .next_enemy
  movzx ecx,byte [bullets_damage+di]
+ push esi                    ; Preserve the enemy record across SI slot selection.
  mov si,di
  call remove_bullet_slot
+ pop esi
  push ecx
  push ebx
  call apply_enemy_damage
  add esp,8
  add [score],edx
+ cmp eax,1
+ jne .next_shot
+ call maybe_drop_powerup
  jmp .next_shot
 .next_enemy:
  inc ebx

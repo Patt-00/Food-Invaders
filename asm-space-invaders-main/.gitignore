@@ -1,6 +1,8 @@
 INVADERS.COM
 TEST.COM
 TESTLOG.TXT
+PBLOG.TXT
+COLLLOG.TXT
 STATUS.TXT
 game.lst
 tests/generated-test.conf

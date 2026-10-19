@@ -23,7 +23,7 @@ initialize_bullets:
     ret
 
 ; Procedure: fire_bullet
-; Purpose: Fire a cleaver (Space), or a two-shot burst while boosted.
+; Purpose: Fire a cleaver, or a two-shot burst during rapid fire.
 ; Input: None. Output: Up to two free slots filled when state/cooldown allow it.
 ; Modifies: AX, flags; all other general-purpose registers preserved.
 ; Shared: Same as spawn_player_weapon.
@@ -31,8 +31,8 @@ fire_bullet:
     mov al, CLEAVER
     call spawn_player_weapon
     jc .done
-    cmp word [player_boost_frames], 0
-    je .done
+    test byte [player_boost_mask], BOOST_MASK_RAPID
+    jz .done
     push bx
     push cx
     push si
@@ -76,7 +76,7 @@ fire_secondary:
 ; Input: AL = CLEAVER or ROLLING_PIN. Output: CF=0 and AX=allocated slot,
 ;         or CF=1 when blocked; new sprite centered above the chef.
 ; Modifies: AX, flags (BX and SI preserved).
-; Shared: game_state, player_x/y, player_boost_frames, fire_cooldown,
+; Shared: game_state, player_x/y, player_boost_mask, fire_cooldown,
 ;         bullets_x/y/active/kind/damage.
 spawn_player_weapon:
     cmp byte [game_state], PLAYING
@@ -114,16 +114,19 @@ spawn_player_weapon:
     add al, bl
     mov byte [fire_cooldown], NORMAL_COOLDOWN
     cmp bl, ROLLING_PIN
-    jne .boost
+    jne .rate
     mov byte [fire_cooldown], SECONDARY_COOLDOWN
-.boost:
-    cmp word [player_boost_frames], 0
-    je .publish
-    inc al                     ; Boost adds one damage, avoiding a 4-damage pin.
+.rate:
+    test byte [player_boost_mask], BOOST_MASK_RAPID
+    jz .damage
     mov byte [fire_cooldown], BOOST_COOLDOWN
     cmp bl, ROLLING_PIN
-    jne .publish
+    jne .damage
     mov byte [fire_cooldown], BOOST_SECONDARY_COOLDOWN
+.damage:
+    test byte [player_boost_mask], BOOST_MASK_DAMAGE
+    jz .publish
+    inc al                     ; Damage pickup adds one point per projectile.
 .publish:
     mov [bullets_damage + si], al
     mov byte [bullets_active + si], 1

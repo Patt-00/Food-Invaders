@@ -1,4 +1,8 @@
 section .data
+%include "assets/source_art.inc"
+source_enemy_art_pointers dd source_cupcake_art,source_fries_art,source_burger_art
+                         dd source_hotdog_art,source_pizza_art,source_rat_art
+test_art_width dd 0
 test_count dd 0
 written dd 0
 output_buffer times 160 db 0
@@ -39,8 +43,20 @@ tests_start:
  check byte [player_lives],3,'starting lives'
  check dword [enemies+2*E_SIZE+E_HP],2,'burger HP'
  check dword [enemies+4*E_SIZE+E_HP],2,'pizza HP'
+ ; A cleared wave must not inherit elapsed movement or firing time.
+ mov dword [enemy_move_timers],0A1B2C3D4h
+ mov dword [enemy_move_timers+(MAX_ENEMIES-1)*4],012345678h
+ mov dword [enemy_fire_timers],0A1B2C3D4h
+ mov dword [enemy_fire_timers+(MAX_ENEMIES-1)*4],012345678h
+ call initialize_enemies
+ check dword [enemy_move_timers],0,'new stage clears first movement timer'
+ check dword [enemy_move_timers+(MAX_ENEMIES-1)*4],0,'new stage clears last movement timer'
+ check dword [enemy_fire_timers],0,'new stage clears first firing timer'
+ check dword [enemy_fire_timers+(MAX_ENEMIES-1)*4],0,'new stage clears last firing timer'
  ; Isolate the randomized per-enemy timer with a deterministic fixture.
  ; Five 50 ms ticks must not move; the sixth expires the 300 ms interval.
+ mov dword [enemies+E_X],10
+ mov dword [enemies+E_Y],3
  mov dword [enemy_move_intervals],300
  mov dword [enemy_move_timers],0
  mov byte [enemy_target_x],11
@@ -70,14 +86,14 @@ tests_start:
  check dword [enemy_move_timers],0,'movement timer consumes elapsed interval'
  ; Both edges, and no repeated descent on the following horizontal tick.
  call solo
- mov dword [enemies+E_X],RIGHT-5
+ mov dword [enemies+E_X],RIGHT-ENEMY_WIDTH
  mov dword [enemies+E_Y],3
  call move_enemies
  check dword [direction],-1,'right edge reverses'
- check dword [enemies+E_X],RIGHT-5,'edge tick no horizontal step'
+ check dword [enemies+E_X],RIGHT-ENEMY_WIDTH,'edge tick no horizontal step'
  check dword [enemies+E_Y],4,'edge descent once'
  call move_enemies
- check dword [enemies+E_X],RIGHT-6,'next tick moves away'
+ check dword [enemies+E_X],RIGHT-ENEMY_WIDTH-1,'next tick moves away'
  check dword [enemies+E_Y],4,'no repeated descent'
  mov dword [enemies+E_X],0
  call move_enemies
@@ -89,17 +105,18 @@ tests_start:
  mov dword [enemies+E_SIZE+E_X],10000
  call move_enemies
  check dword [enemies+E_X],11,'dead bounds ignored'
- ; Different type width (burger=7) controls the right limit.
+ ; The burger's own source width controls its right limit.
  mov dword [enemies+E_TYPE],2
- mov dword [enemies+E_X],RIGHT-7
+ mov dword [enemies+E_X],RIGHT-14
  call move_enemies
- check dword [enemies+E_X],RIGHT-7,'actual type width used'
+ check dword [enemies+E_X],RIGHT-14,'actual type width used'
  check dword [direction],-1,'wide sprite edge turn'
- ; Breach is atomic and latched, no y=23 stored for height 3.
+ ; Breach is atomic and latched for the full-height source artwork.
+ mov dword [enemies+E_TYPE],0
  mov dword [enemies+E_X],0
- mov dword [enemies+E_Y],BOTTOM-3
+ mov dword [enemies+E_Y],BOTTOM-ENEMY_HEIGHT
  call move_enemies
- check dword [enemies+E_Y],BOTTOM-3,'breach keeps legal y'
+ check dword [enemies+E_Y],BOTTOM-ENEMY_HEIGHT,'breach keeps legal y'
  check dword [enemy_events],EV_BREACH,'breach event'
  call move_enemies
  check dword [enemy_events],EV_BREACH,'one latched breach'
@@ -153,17 +170,19 @@ tests_start:
  add esp,8
  check dword [enemies+E_HP],1,'negative damage ignored'
  ; Half-open bullet rectangle: x=right and y=bottom miss, last cell hits.
+ mov dword [enemy_x],40
+ mov dword [enemy_y],30
  mov byte [bullet_active],1
  mov byte [bullets_damage],1
- mov byte [bullet_x],15
- mov byte [bullet_y],3
+ mov byte [bullet_x],40+ENEMY_WIDTH
+ mov byte [bullet_y],30
  call check_bullet_enemy
  check byte [bullet_active],1,'right edge excluded'
- mov byte [bullet_x],14
- mov byte [bullet_y],6
+ mov byte [bullet_x],40
+ mov byte [bullet_y],30+ENEMY_HEIGHT
  call check_bullet_enemy
  check byte [bullet_active],1,'bottom edge excluded'
- mov byte [bullet_y],5
+ mov byte [bullet_y],30+ENEMY_HEIGHT-1
  call check_bullet_enemy
  check byte [bullet_active],0,'last interior cell hits'
  check dword [score],10,'collision awards once'
@@ -179,11 +198,11 @@ tests_start:
  check dword [alive_count],0,'player projectile path hit'
  ; Rectangle player contact: touching edge is not overlap.
  call solo
- mov dword [enemies+E_X],TEST_PLAYER_X-5
+ mov dword [enemies+E_X],TEST_PLAYER_X-ENEMY_WIDTH
  mov dword [enemies+E_Y],TEST_PLAYER_Y
  call check_enemy_player
  check dword [loss_pending],0,'AABB touching edge excluded'
- mov dword [enemies+E_X],TEST_PLAYER_X-4
+ mov dword [enemies+E_X],TEST_PLAYER_X-ENEMY_WIDTH+1
  call check_enemy_player
  check dword [loss_pending],1,'AABB overlap hits'
  ; Pool full, boundary validation and no overwrite of active slots.
@@ -218,24 +237,24 @@ tests_start:
  call initialize_game
  call fire_enemy
  mov eax,[shots+S_X]
- cmp eax,50
+ cmp eax,91
  jne .first_check_pizza
  inc dword [test_count]
  jmp .first_bottom_shooter_ok
 .first_check_pizza:
- check eax,64,'first random shooter is an unblocked bottom enemy'
+ check eax,117,'first random shooter is an unblocked bottom enemy'
 .first_bottom_shooter_ok:
- check dword [shots+S_Y],11,'shot starts below sprite'
+ check dword [shots+S_Y],85,'shot starts below full-size source sprite'
  call fire_enemy
  mov eax,[shots+S_SIZE+S_X]
- cmp eax,50
+ cmp eax,91
  jne .second_check_pizza
  inc dword [test_count]
  jmp .second_bottom_shooter_ok
 .second_check_pizza:
- check eax,64,'second random shooter is an unblocked bottom enemy'
+ check eax,117,'second random shooter is an unblocked bottom enemy'
 .second_bottom_shooter_ok:
- check dword [shots+S_SIZE+S_Y],11,'second bottom shot starts below sprite'
+ check dword [shots+S_SIZE+S_Y],85,'second bottom shot starts below full-size source sprite'
  ; Single life loss when multiple sources coincide; preserve survivors HP.
  call solo
  mov dword [enemies+E_X],TEST_PLAYER_X
@@ -286,13 +305,13 @@ tests_start:
  check dword [alive_count],1,'boss alone'
  check dword [boss_mode],1,'boss encounter'
  check dword [enemies+E_HP],20,'boss health'
- mov dword [enemies+E_X],RIGHT-11
+ mov dword [enemies+E_X],RIGHT-15
  call move_enemies
  check dword [direction],-1,'boss wall reversal'
- check dword [enemies+E_Y],2,'boss no descent'
+ check dword [enemies+E_Y],TOP,'boss no descent'
  call fire_enemy
- check dword [shots+S_X],RIGHT-7,'boss shot centered'
- check dword [shots+S_Y],6,'boss shot below rectangle'
+ check dword [shots+S_X],RIGHT-9,'boss shot centered'
+ check dword [shots+S_Y],TOP+ENEMY_HEIGHT,'boss shot below full-size art'
  push dword 20
  push dword 0
  call apply_enemy_damage
@@ -387,15 +406,61 @@ tests_start:
  call initialize_game
  call show_main_menu
  check word [back_buffer+((4+TEST_MENU_Y)*SCREEN_WIDTH+24+TEST_MENU_X)*2],0A46h,'Food Invaders menu title'
+ check word [back_buffer+((17+TEST_MENU_Y)*SCREEN_WIDTH+22+TEST_MENU_X)*2],0F44h,'menu explains selectable difficulty'
+ mov ah,05h
+ mov cx,0231h                 ; BIOS enqueue '1': Easy.
+ int 16h
+ call wait_for_menu_input
+ check al,DIFFICULTY_EASY,'menu selects Easy difficulty'
+ mov [difficulty_level],al
+ call initialize_game
+ check byte [player_lives],5,'Easy starts with five lives'
+ mov ah,05h
+ mov cx,0433h                 ; BIOS enqueue '3': Hard.
+ int 16h
+ call wait_for_result_input
+ check al,1,'result screen accepts difficulty restart'
+ check byte [difficulty_level],DIFFICULTY_HARD,'result screen selects Hard'
+ call initialize_game
+ check byte [player_lives],2,'Hard starts with two lives'
+ mov byte [difficulty_level],DIFFICULTY_EASY
+ mov eax,400
+ call scale_difficulty_interval
+ check eax,600,'Easy slows enemy timers by one half'
+ mov byte [difficulty_level],DIFFICULTY_NORMAL
+ mov eax,400
+ call scale_difficulty_interval
+ check eax,400,'Normal keeps the base enemy timer'
+ mov byte [difficulty_level],DIFFICULTY_HARD
+ mov eax,400
+ call scale_difficulty_interval
+ check eax,300,'Hard speeds enemy timers by one quarter'
+ mov byte [difficulty_level],DIFFICULTY_NORMAL
+ call initialize_game
+ call verify_enemy_art_collection
+ call initialize_game
  call draw_game
- check word [back_buffer+(4*SCREEN_WIDTH+10)*2],0D28h,'cupcake drawn with color'
+ check word [back_buffer+(15*SCREEN_WIDTH+10)*2],0D23h,'full-size cupcake art drawn with color'
  check word [back_buffer+(TEST_PLAYER_Y*SCREEN_WIDTH+TEST_PLAYER_X+2)*2],0F23h,'chef drawn in player area'
  push es
  mov ax,0B800h
  mov es,ax
- mov ax,[es:(4*SCREEN_WIDTH+10)*2]
+ mov ax,[es:(15*SCREEN_WIDTH+10)*2]
  pop es
- check ax,0D28h,'VGA memory contains rendered cupcake'
+ check ax,0D23h,'VGA memory contains rendered cupcake artwork'
+ mov byte [pickup_active],1
+ mov byte [pickup_kind],POWERUP_SPEED
+ mov byte [pickup_x],40
+ mov byte [pickup_y],50
+ call clear_screen
+ call draw_pickup
+ mov esi,source_fireball_art
+ mov edi,back_buffer+(50*SCREEN_WIDTH+40)*2
+ mov ecx,PICKUP_WIDTH
+ mov ebp,PICKUP_HEIGHT
+ mov bl,0Ah
+ call verify_art_rows
+ inc dword [test_count]
  mov eax,0FFFFFFFFh
  mov edx,5
  mov bx,0F58h
@@ -420,7 +485,7 @@ tests_start:
  mov dword [current_wave],5
  call initialize_enemies
  call draw_game
- check word [back_buffer+(3*SCREEN_WIDTH+34)*2],0F28h,'Ratatouille distinct sprite'
+ check word [back_buffer+(TOP*SCREEN_WIDTH+34)*2],0F23h,'full-size Ratatouille art renders'
  call show_game_over
  check word [back_buffer+((7+TEST_MENU_Y)*SCREEN_WIDTH+30+TEST_MENU_X)*2],0C47h,'game over renders'
  call show_victory
@@ -470,6 +535,8 @@ tests_start:
  call assert_invariants
  dec dword [stress_remaining]
  jnz .stress
+ mov ax,3
+ int 10h                     ; Return DOSBox to readable text before reporting.
  mov ecx,pass_prefix
  mov edx,pass_length
  call print_result
@@ -489,6 +556,43 @@ solo:
  mov ecx,(MAX_ENEMIES-1)*E_SIZE/4
  a32 rep stosd
  mov dword [alive_count],1
+ mov dword [enemies+E_X],10
+ mov dword [enemies+E_Y],3
+ mov dword [enemies+E_SX],10
+ mov dword [enemies+E_SY],3
+ ret
+
+; Compare all six active enemy designs against independent document rows.
+verify_enemy_art_collection:
+ pushad
+ mov esi,enemies
+ mov ecx,MAX_ENEMIES
+.clear:
+ mov dword [esi+E_ACTIVE],0
+ add esi,E_SIZE
+ loop .clear
+ mov dword [alive_count],1
+ xor ebx,ebx
+.art:
+ mov dword [enemies+E_ACTIVE],1
+ mov [enemies+E_TYPE],ebx
+ mov dword [enemies+E_X],10
+ mov dword [enemies+E_Y],20
+ call clear_screen
+ call draw_enemy
+ mov eax,ebx
+ imul eax,T_SIZE
+ mov ecx,[type_table+eax+T_W]
+ mov ebp,[type_table+eax+T_H]
+ mov esi,[source_enemy_art_pointers+ebx*4]
+ mov bl,[type_table+eax+T_COLOR]
+ mov edi,back_buffer+(20*SCREEN_WIDTH+10)*2
+ call verify_art_rows
+ inc dword [test_count]
+ inc ebx
+ cmp ebx,6
+ jb .art
+ popad
  ret
 
 ; Stress checks independently count living slots and verify geometry/HP/state.
@@ -570,9 +674,40 @@ assert_invariants:
  jmp test_failed
 
 test_failed:
+ mov ax,3
+ int 10h
  call print_result
  mov ax,4C01h
  int 21h
+
+; Compare ECX by EBP cells from DS:ESI with rendered words at ES:EDI.
+; BL is the expected color. A mismatch names the complete-art check.
+verify_art_rows:
+ pushad
+ mov [test_art_width],ecx
+.row:
+ mov ecx,[test_art_width]
+.cell:
+ lodsb
+ mov ah,bl
+ cmp word [edi],ax
+ jne .bad
+ add edi,2
+ dec ecx
+ jnz .cell
+ mov eax,[test_art_width]
+ shl eax,1
+ mov edx,SCREEN_WIDTH*2
+ sub edx,eax
+ add edi,edx
+ dec ebp
+ jnz .row
+ popad
+ ret
+.bad:
+ mov ecx,art_failure_text
+ mov edx,art_failure_length
+ jmp test_failed
 
 ; ECX=DS-relative string offset, EDX=length. DOS stdout, supports redirection.
 print_result:
@@ -611,5 +746,7 @@ pass_prefix db 'PASS: '
 pass_length equ $-pass_prefix
 pass_suffix db ' assertions (real mode, 32-bit calculations)',13,10
 pass_suffix_length equ $-pass_suffix
+art_failure_text db 'FAIL: rendered ASCII art differs from the team document',13,10
+art_failure_length equ $-art_failure_text
 section .text
 

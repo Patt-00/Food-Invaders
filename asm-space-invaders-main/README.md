@@ -1,18 +1,18 @@
 # Food Invaders
 
-A modular NASM game for 386-compatible real-mode DOS. This integration combines the original chef artwork, dual weapons and boosts with colored enemy formations, hostile shots, stages and the Ratatouille boss. Rendering uses a 132×120 SVGA text battlefield with an in-memory frame buffer.
+A 16-bit NASM game for 386-compatible real-mode DOS. `main.asm` renders colored ASCII in a 132 by 120 SVGA text screen. The playable build uses all ten ASCII designs from the team document: the Chef, five food enemies, Ratatouille, two weapons, and the fireball pickup.
 
 ## Build and run
 
-From this directory, use NASM:
+From this directory, build the game with NASM:
 
 ```sh
 nasm -f bin main.asm -o INVADERS.COM
 ```
 
-`build.bat` provides the same build on Windows. `build.ps1` also supports warning checks and tests. All COM files must stay below 60,000 bytes to leave room for the DOS stack.
+`build.bat` provides the same basic build on Windows. `build.ps1 -Test -Core normal` assembles the game and three regression suites, then runs them in DOSBox-X. Repeat with `-Core dynamic` to test the other supported CPU core. All COM files must stay below 60,000 bytes to leave room for the DOS stack.
 
-Run with **DOSBox-X**, configured with `machine=svga_s3`. The enlarged display uses custom vertical timing; the enemy branch's earlier DOSBox Staging configuration does not provide this integrated display. `dosbox.conf` supplies the game configuration. Mount this directory as drive C and run `INVADERS.COM`, or use `run-dosbox.ps1 -DosBoxPath <path-to-dosbox-x>` on Windows. On Termux, use `../run-termux.sh` with Termux X11.
+Run with **DOSBox-X** and the `machine=svga_s3` setting. The game uses custom vertical timing for the 132 by 120 display. `dosbox.conf` supplies the emulator settings and starts `INVADERS.COM` when DOSBox-X starts from this directory. On Windows, use `run-dosbox.ps1 -DosBoxPath <path-to-dosbox-x>`. On Termux, use `../run-termux.sh` with Termux X11.
 
 ## Controls and behavior
 
@@ -22,13 +22,20 @@ Run with **DOSBox-X**, configured with `machine=svga_s3`. The enlarged display u
 | Space | Fire a cleaver (one damage) |
 | X | Fire a rolling pin (two damage) |
 | Escape | Quit |
-| 1/P/Space | Start at the menu |
-| R/Space | Restart after game over or victory |
-| 2/Q | Quit from a menu |
+| 1 | Select Easy and start, or restart on Easy from a result screen |
+| 2 | Select Normal and start, or restart on Normal from a result screen |
+| 3 | Select Hard and start, or restart on Hard from a result screen |
+| P/Space | Start or restart on Normal |
+| R | Restart after game over or victory at the current difficulty |
+| Q/Esc | Quit from a menu or game |
 
-Three player projectile slots share a weapon cooldown. Cleavers wait 24 ticks and rolling pins 40 ticks; both move three rows per update. `activate_player_powerup` enables an 80-tick boost: faster movement, one extra damage, shorter cooldowns, and two-cleaver bursts. Pickup spawning remains an extension point.
+The menu offers Easy, Normal, and Hard. Easy starts with five lives and lengthens enemy movement and firing delays by 50 percent. Normal starts with three lives and uses the stage delays. Hard starts with two lives and shortens both enemy delays by 25 percent.
 
-Ten enemies start across two rows, then independently travel toward new random destinations across most of the arena at varied speeds. Cupcakes, fries and hotdogs have one HP; burgers and pizzas have two. Each eligible hotdog or pizza maintains its own randomized firing timer, so shots are not released by one shared volley clock. Type metadata controls each enemy's dimensions, color, HP and score. Clearing four stages leads to the 20-HP Ratatouille boss; defeating it produces victory. Contact, hostile fire and bottom breaches aggregate to at most one life loss per tick. Surviving enemies retain health and reset positions after a hit; shots clear and the chef receives one second of invulnerability. Life loss takes priority over a simultaneous stage clear.
+The Chef fires the full 12 by 16 cleaver design with Space and the full 12 by 16 rolling pin with X. Three player shots can be active at once, and the weapons share a cooldown. Cleavers fire every 24 game ticks and rolling pins every 40 ticks. Both travel three rows per update.
+
+Each enemy defeat has a one-in-four chance to drop the document's 14 by 18 fireball when no pickup is already falling. It falls one row every 200 milliseconds. Catching a green fireball increases movement speed. Catching a red fireball adds one damage per shot. Catching a yellow fireball shortens cooldowns and adds a second cleaver to each shot. Each effect lasts 80 game ticks. Distinct effects can overlap, and another pickup refreshes the timer. `activate_player_powerup` remains available to modules that need to activate all three effects together.
+
+The five food enemies use their documented source dimensions: the cupcake is 22 by 16, fries, hotdog, and pizza are 14 by 16, and the burger is 14 by 11. Ratatouille is 15 by 16. Each regular enemy gets a random destination, a movement delay, and, for hotdogs and pizzas, a separate firing timer. Five 26-cell columns and two vertical bands keep the full designs readable without sprite overlap. The boss moves across the screen. Clearing four stages leads to the 20-HP Ratatouille boss. Defeating it produces victory. Contact, hostile fire, and bottom breaches aggregate to at most one life loss per tick. Surviving enemies retain health and reset positions after a hit. The Chef receives one second of invulnerability. Life loss takes priority over a simultaneous stage clear.
 
 Hostile shots use visible 2×2 red markers, move one row every 200 ms, and damage a 4×6 area at the center of the Chef. Each shot interval is randomized within a stage-dependent range so enemies do not create a steady synchronized stream.
 
@@ -45,17 +52,19 @@ Hostile shots use visible 2×2 red markers, move one row every 200 ms, and damag
 | `modules/encounter.asm` | Simulation ordering, aggregated life loss and progression |
 | `modules/display.asm` | Clipped colored rendering, original artwork, HUD and DWORD scores |
 | `modules/menu.asm` | Main menu, game over and victory |
-| `modules/features.asm` | Shield and future pickup extension points |
+| `modules/features.asm` | Random fireball drops, falling, collection, and timed effect activation |
 
 `simulate_tick` updates the player boost, timers, projectiles, enemies and collisions once per tick, then resolves damage/progression. Call `initialize_game` to reset everything. `fire_bullet` and `fire_secondary` allocate player shots; `remove_bullet_slot` takes the slot in SI. Collision checks use half-open rectangles and captured weapon damage, preserving all general-purpose registers. They queue life loss in `loss_pending`; `resolve_game_events` applies it once. Enemy deaths emit clear/boss events rather than immediately ending the game.
 
 Enemy APIs use DWORD arguments with real-mode WORD return addresses: callers normalize ESP, push arguments right-to-left and remove them after the call. `get_enemy_bounds(index)` returns a slot pointer in EAX and metadata in EDX. `apply_enemy_damage(index, damage)` returns a new-death flag in EAX and a one-time reward in EDX; collision adds that reward to the DWORD score. Enemy APIs preserve EBX/ESI/EDI/EBP. DS/ES address the shared COM segment. Legacy `enemy_*` names alias DWORD fields in slot zero; legacy `bullet_*` names alias byte player-projectile slot zero.
 
-Keep gameplay free of rendering interrupts, use one shared definition for each variable, preserve documented register contracts, and rebuild after integration changes. The chef remains 12×16; weapon artwork is reduced from 12×16 to 6×8 at draw time. Enemy sprite sizes come from their metadata.
+Keep gameplay free of rendering interrupts, use one shared definition for each variable, preserve documented register contracts, and rebuild after integration changes. The Chef and both weapons render at their full 12 by 16 source size. Enemy and fireball bounds come from the artwork metadata and constants.
 
 ## Tests
 
-Assemble all existing suites from this directory:
+`build.ps1 -Test` assembles and runs the core, player/weapon, and collision suites. The script saves their DOSBox-X output to `tests/integrated-<core>-result.txt`. `tests/integrated-binary-hashes.json` records the current game and core-test binary hashes. The older `tests/normal-result.txt`, `tests/dynamic-result.txt`, `tests/merged-result.txt`, and `tests/binary-hashes.json` preserve earlier validation records.
+
+For direct assembly, use these commands:
 
 ```sh
 nasm -f bin -Wall -w-reloc -Werror -DSELFTEST main.asm -o TEST.COM
@@ -64,11 +73,12 @@ nasm -f bin -Wall -w-reloc -Werror tests/collision.asm -o COLLTEST.COM
 nasm -f bin -Wall -w-reloc -Werror -DSELFTEST -DVISUAL_TEST main.asm -o WINTEST.COM
 ```
 
-Run each COM in DOSBox-X. They print `PASS` or a specific failure and return status 0 or 1. In DOSBox-X 2026.10.01 with a 386 CPU, the core suite passes 40,285 assertions in both normal and dynamic cores; the player and collision suites also pass in both cores. The core suite includes a five-stage campaign and 20,000 simulation ticks. The player suite checks weapons, boosts, boundaries, artwork and frame presentation. The collision suite checks rectangle edges, damage, priorities, inactive-state guards, registers and stack balance. `WINTEST.COM` runs the same core suite, then pauses on the rendered victory screen for a visual capture; this is a controlled renderer view, while the campaign state is verified by the automated simulation.
+Run each COM in DOSBox-X. The core suite reports its assertion count; the player/weapon and collision suites report a named PASS or failure. The core suite includes the five-stage campaign, 20,000 simulation ticks, and cell-by-cell checks for all six enemy/boss designs plus the fireball. The player suite checks the Chef, both native-size weapons, timed boosts, boundaries, pickup movement, and collection. The collision suite checks rectangle edges, damage, priorities, inactive-state guards, registers, and stack balance. `WINTEST.COM` runs the core suite, then pauses on the rendered victory screen for a visual capture. The campaign state comes from the automated simulation.
 
-For headless CPU-level checks, install the optional Python `unicorn` package and run:
+For headless CPU-level checks, install the pinned optional Python dependency and run:
 
 ```sh
+python3 -m pip install -r requirements-test.txt
 python3 tests/run-headless.py TEST.COM PBTEST.COM COLLTEST.COM
 ```
 

@@ -1,7 +1,7 @@
 # Food Invaders
 
-Integrated NASM/DOS game combining the collision, player/weapons, and enemy/boss branches with the menu and color updates from main.
+Food Invaders is a 16-bit NASM game for real-mode DOS. It renders the team's Chef, food enemies, Ratatouille, weapons, and fireball ASCII art in a 132 by 120 SVGA text screen. Run it in DOSBox-X with `machine=svga_s3`.
 
-The game includes dual weapons, timed player boosts, colored enemy formations and attacks, four regular stages, and the Ratatouille boss. The 132×120 text battlefield preserves the original chef and weapon artwork and requires DOSBox-X with `machine=svga_s3`.
+The Chef fights independently moving food enemies with cleavers and rolling pins. The game has Easy, Normal, and Hard settings, a falling fireball power-up, four regular stages, and a final Ratatouille boss.
 
-See [build, controls, architecture, and tests](asm-space-invaders-main/README.md). Player/weapons contribution details remain in [DEVELOPER2.md](asm-space-invaders-main/DEVELOPER2.md).
+See [build instructions, controls, architecture, and tests](asm-space-invaders-main/README.md). The player and weapon contribution is documented in [DEVELOPER2.md](asm-space-invaders-main/DEVELOPER2.md).

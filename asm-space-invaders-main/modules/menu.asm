@@ -1,12 +1,13 @@
 ; Food Invaders menus. Existing public procedure/input interfaces retained.
 %include "assets/title_art.inc"
 %include "assets/gameover_art.inc"
-menu_hint_text db '1 / P / SPACE: play      2 / Q / ESC: quit',0
+menu_hint_text db '1-3 SELECT + PLAY   P/SPACE NORMAL   Q/ESC QUIT',0
 controls_text db 'A / D or arrow keys: move     SPACE: cleaver  X: rolling pin',0
 legend_text db 'Cupcake   Fries   Burger   Hotdog   Pizza    Boss: Ratatouille',0
 details_text db 'Hotdog and Pizza shoot. Burger and Pizza take two cleaver hits.',0
 boss_text db 'Clear four stages, then defeat Ratatouille (20 HP).',0
-over_hint_text db 'R / SPACE: restart      Q / ESC: quit',0
+over_hint_text db 'R/SPACE: restart  1-3: difficulty  Q/ESC: quit',0
+difficulty_text db 'DIFFICULTY: 1 EASY  2 NORMAL  3 HARD',0
 victory_text db 'KITCHEN SAVED - RATATOUILLE DEFEATED!',0
 result_text db 'FINAL SCORE:',0
 
@@ -30,8 +31,11 @@ show_main_menu:
  mov dx,0F0Eh + ((SCREEN_HEIGHT-25)/2)*256 + (SCREEN_WIDTH-80)/2
  mov si,boss_text
  call print_string
+ mov dx,1116h + ((SCREEN_HEIGHT-25)/2)*256 + (SCREEN_WIDTH-80)/2
+ mov si,difficulty_text
+ call print_string
  mov bl,0Eh
- mov dx,1312h + ((SCREEN_HEIGHT-25)/2)*256 + (SCREEN_WIDTH-80)/2
+ mov dx,140Eh + ((SCREEN_HEIGHT-25)/2)*256 + (SCREEN_WIDTH-80)/2
  mov si,menu_hint_text
  call print_string
  call present_screen
@@ -74,32 +78,77 @@ draw_result:
  call present_screen
  ret
 
-; BIOS input routine from original project; AL=1 play/restart, AL=2 quit.
+; Menu input: AL=selected difficulty 1..3; zero means quit.
 wait_for_menu_input:
+.read:
  mov ah,00h
  int 16h
  cmp al,'1'
- je .play
- cmp al,'p'
- je .play
- cmp al,'P'
- je .play
- cmp al,'r'
- je .play
- cmp al,'R'
- je .play
- cmp al,' '
- je .play
+ je .easy
  cmp al,'2'
- je .quit
+ je .normal
+ cmp al,'3'
+ je .hard
+ cmp al,'p'
+ je .normal
+ cmp al,'P'
+ je .normal
+ cmp al,' '
+ je .normal
  cmp al,'q'
  je .quit
  cmp al,'Q'
  je .quit
  cmp al,1Bh
  je .quit
- jmp wait_for_menu_input
-.play:
+ jmp .read
+.easy:
+ mov al,DIFFICULTY_EASY
+ ret
+.normal:
+ mov al,DIFFICULTY_NORMAL
+ ret
+.hard:
+ mov al,DIFFICULTY_HARD
+ ret
+.quit:
+ xor al,al
+ ret
+
+; Result input: R/Space restarts at the current difficulty; 1..3 changes it.
+; AL=1 means restart, AL=2 means quit.
+wait_for_result_input:
+.read:
+ mov ah,00h
+ int 16h
+ cmp al,'1'
+ je .easy
+ cmp al,'2'
+ je .normal
+ cmp al,'3'
+ je .hard
+ cmp al,'r'
+ je .restart
+ cmp al,'R'
+ je .restart
+ cmp al,' '
+ je .restart
+ cmp al,'q'
+ je .quit
+ cmp al,'Q'
+ je .quit
+ cmp al,1Bh
+ je .quit
+ jmp .read
+.easy:
+ mov byte [difficulty_level],DIFFICULTY_EASY
+ jmp .restart
+.normal:
+ mov byte [difficulty_level],DIFFICULTY_NORMAL
+ jmp .restart
+.hard:
+ mov byte [difficulty_level],DIFFICULTY_HARD
+.restart:
  mov al,1
  ret
 .quit:

@@ -7,9 +7,8 @@ PLAYER_WIDTH    equ 12
 PLAYER_HEIGHT   equ 16
 SOURCE_ART_WIDTH equ 12
 SOURCE_ART_HEIGHT equ 16
-WEAPON_SCALE    equ 2        ; Reduce only weapon artwork in the renderer.
-WEAPON_WIDTH    equ SOURCE_ART_WIDTH / WEAPON_SCALE
-WEAPON_HEIGHT   equ SOURCE_ART_HEIGHT / WEAPON_SCALE
+WEAPON_WIDTH    equ SOURCE_ART_WIDTH
+WEAPON_HEIGHT   equ SOURCE_ART_HEIGHT
 BULLET_SPEED    equ 3        ; Rows per update; independent of firing cooldown.
 HOSTILE_SHOT_WIDTH equ 2
 HOSTILE_SHOT_HEIGHT equ 2
@@ -27,12 +26,12 @@ PLAYER_DANGER_Y equ (PLAYER_HEIGHT - PLAYER_DANGER_HEIGHT) / 2
     %error "Text frame must fit in VGA text memory"
 %endif
 
-; Keep the chef at source size; halve weapon width and height at draw time.
+; The Chef and both weapon designs use their full documented dimensions.
 %if PLAYER_WIDTH != SOURCE_ART_WIDTH || PLAYER_HEIGHT != SOURCE_ART_HEIGHT
     %error "Player dimensions must match source artwork dimensions"
 %endif
-%if WEAPON_SCALE != 2 || WEAPON_WIDTH * WEAPON_SCALE != SOURCE_ART_WIDTH || WEAPON_HEIGHT * WEAPON_SCALE != SOURCE_ART_HEIGHT
-    %error "Weapon renderer requires exact 2x2 source blocks"
+%if WEAPON_WIDTH != SOURCE_ART_WIDTH || WEAPON_HEIGHT != SOURCE_ART_HEIGHT
+    %error "Weapon dimensions must match the source artwork"
 %endif
 %if BULLET_SPEED < 1 || BULLET_SPEED > WEAPON_HEIGHT
     %error "Projectile steps must stay within sprite height to avoid skipped collisions"
@@ -50,15 +49,36 @@ BOOST_SECONDARY_COOLDOWN equ 32
 BOOST_BURST_COUNT equ 2
 BOOST_FRAMES    equ 80       ; Roughly four seconds.
 INITIAL_ENEMY_HEALTH equ 8   ; Eight cleavers or four rolling pins per demo enemy.
+PICKUP_STEP_TICKS equ 4      ; A falling pickup moves once every 200 ms.
+PICKUP_WIDTH equ 14
+PICKUP_HEIGHT equ 18
 
-ENEMY_WIDTH     equ 5
-ENEMY_HEIGHT    equ 3
+%define DIFFICULTY_EASY 1
+%define DIFFICULTY_NORMAL 2
+%define DIFFICULTY_HARD 3
+%define BOOST_MASK_SPEED 1
+%define BOOST_MASK_DAMAGE 2
+%define BOOST_MASK_RAPID 4
+%define BOOST_MASK_ALL (BOOST_MASK_SPEED|BOOST_MASK_DAMAGE|BOOST_MASK_RAPID)
+%define POWERUP_SPEED 1
+%define POWERUP_DAMAGE 2
+%define POWERUP_RAPID 3
+
+ENEMY_WIDTH     equ 22       ; Widest source design: the cupcake.
+ENEMY_HEIGHT    equ 16       ; Tallest food enemy source design.
+ENEMY_LANE_COUNT equ 5
+ENEMY_LANE_WIDTH equ (SCREEN_WIDTH / ENEMY_LANE_COUNT)
+ENEMY_FRONT_TOP equ 3
+ENEMY_FRONT_BAND_HEIGHT equ 40
+ENEMY_REAR_TOP equ 44
+ENEMY_REAR_BAND_HEIGHT equ 66
+BOSS_MIN_Y equ 2
+BOSS_Y_RANGE equ 21
 
 %define LEFT 0
 %define RIGHT SCREEN_WIDTH
 %define TOP 2
 %define BOTTOM (SCREEN_HEIGHT - 1)
-%define RANDOM_ENEMY_MAX_Y (SCREEN_HEIGHT - PLAYER_HEIGHT - 10)
 %define MAX_ENEMIES 10
 %define MAX_SHOTS 16
 %define MENU 0
@@ -95,7 +115,8 @@ ENEMY_HEIGHT    equ 3
 
 player_x        db (SCREEN_WIDTH - PLAYER_WIDTH) / 2       ; Left column of the player sprite (0 through SCREEN_WIDTH - PLAYER_WIDTH).
 player_y        db SCREEN_HEIGHT - PLAYER_HEIGHT - 1       ; Top row of the player sprite (within the playfield).
-player_lives    db 3        ; Remaining player lives for future enemy attacks.
+player_lives    db 3        ; Remaining lives depend on the selected difficulty.
+difficulty_level db DIFFICULTY_NORMAL
 
 ; Legacy names alias slot zero; array users index with SI (0..MAX_BULLETS-1).
 bullet_x:
@@ -108,6 +129,7 @@ bullets_kind    times MAX_BULLETS db CLEAVER
 bullets_damage  times MAX_BULLETS db 0 ; Damage is captured at firing time.
 fire_cooldown   db 0
 player_boost_frames dw 0
+player_boost_mask db 0
 
 ; Legacy enemy names alias slot zero. Enemy fields and score are DWORDs.
 enemy_x equ enemies+E_X
@@ -117,8 +139,12 @@ enemy_health equ enemies+E_HP
 score dd 0
 current_wave dd 1
 game_state db MENU
-shield_active db 0
 powerup_active db 0
+pickup_active db 0
+pickup_kind db POWERUP_SPEED
+pickup_x db 0
+pickup_y db 0
+pickup_move_timer db 0
 %include "assets/enemy_art.inc"
 
 shot_timer dd 0

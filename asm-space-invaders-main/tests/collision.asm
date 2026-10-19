@@ -10,6 +10,7 @@ jmp start
 %include "modules/player.asm"
 %include "modules/bullet.asm"
 %include "modules/enemy.asm"
+%include "modules/features.asm"
 %include "modules/collision.asm"
 %include "modules/encounter.asm"
 

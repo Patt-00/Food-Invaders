@@ -51,29 +51,97 @@ random_attack_delay:
  mov eax,[attack_min_interval]
  mov ecx,[attack_interval_range]
  call random_in_range
+ call scale_difficulty_interval
  ret
 
-; choose_enemy_target(): EBX=slot, ESI=enemy record; choose a broad independent destination.
+; scale_difficulty_interval(): EAX=base delay; return adjusted delay.
+; Easy is 1.5x slower, normal is unchanged, hard is 0.75x faster.
+scale_difficulty_interval:
+ cmp byte [difficulty_level],DIFFICULTY_EASY
+ je .easy
+ cmp byte [difficulty_level],DIFFICULTY_HARD
+ je .hard
+ ret
+.easy:
+ imul eax,eax,3
+ xor edx,edx
+ mov ecx,2
+ div ecx
+ ret
+.hard:
+ imul eax,eax,3
+ xor edx,edx
+ mov ecx,4
+ div ecx
+ test eax,eax
+ jnz .done
+ inc eax
+.done:
+ ret
+
+; choose_enemy_target(): EBX=slot, ESI=enemy record; choose a spaced random destination.
 choose_enemy_target:
  push ecx
  push edx
+ push edi
+ cmp dword [boss_mode],0
+ jne .boss_target
+
+ ; Regular sprites stay within one of five columns and one of two vertical
+ ; bands. Their largest source design is 22 cells wide, so these lanes keep
+ ; all ten detailed drawings readable without overlapping one another.
  mov edx,[esi+E_TYPE]
  imul edx,T_SIZE
- mov eax,RIGHT
- sub eax,[type_table+edx+T_W]
- inc eax
- mov ecx,eax
+ mov edi,[type_table+edx+T_W]
+ mov eax,ebx
+ xor edx,edx
+ mov ecx,ENEMY_LANE_COUNT
+ div ecx
+ imul edx,ENEMY_LANE_WIDTH
+ add edx,(SCREEN_WIDTH-ENEMY_LANE_COUNT*ENEMY_LANE_WIDTH)/2
+ mov ecx,ENEMY_LANE_WIDTH
+ sub ecx,edi
+ inc ecx
+ mov eax,edx
+ call random_in_range
+ mov [enemy_target_x+ebx],al
+
+ mov eax,ebx
+ xor edx,edx
+ mov ecx,ENEMY_LANE_COUNT
+ div ecx
+ test eax,eax
+ jnz .rear_band
+ mov eax,ENEMY_FRONT_TOP
+ mov ecx,ENEMY_FRONT_BAND_HEIGHT
+ jmp .target_y
+.rear_band:
+ mov eax,ENEMY_REAR_TOP
+ mov ecx,ENEMY_REAR_BAND_HEIGHT
+.target_y:
+ mov edx,[esi+E_TYPE]
+ imul edx,T_SIZE
+ sub ecx,[type_table+edx+T_H]
+ inc ecx
+ call random_in_range
+ mov [enemy_target_y+ebx],al
+ jmp .done
+
+.boss_target:
+ mov edx,[esi+E_TYPE]
+ imul edx,T_SIZE
+ mov ecx,SCREEN_WIDTH
+ sub ecx,[type_table+edx+T_W]
+ inc ecx
  xor eax,eax
  call random_in_range
  mov [enemy_target_x+ebx],al
- mov eax,RANDOM_ENEMY_MAX_Y
- sub eax,[type_table+edx+T_H]
- sub eax,TOP
- inc eax
- mov ecx,eax
- mov eax,TOP
+ mov eax,BOSS_MIN_Y
+ mov ecx,BOSS_Y_RANGE
  call random_in_range
  mov [enemy_target_y+ebx],al
+.done:
+ pop edi
  pop edx
  pop ecx
  ret
@@ -89,6 +157,8 @@ initialize_enemies:
  mov ecx,MAX_ENEMIES*E_SIZE/4
  cld
  a32 rep stosd
+ ; The next four per-enemy timer/interval tables are contiguous; clear all
+ ; four tables so no movement or firing delay carries into the next stage.
  mov edi,enemy_move_timers
  mov ecx,MAX_ENEMIES*4
  a32 rep stosd
@@ -129,28 +199,51 @@ initialize_enemies:
 .regular:
  mov eax,ebx
  xor edx,edx
- mov ecx,5
+ mov ecx,ENEMY_LANE_COUNT
  div ecx
  mov [esi+E_TYPE],edx
  imul edx,T_SIZE
  mov ecx,[type_table+edx+T_HP]
  mov [esi+E_HP],ecx
- imul eax,5
- add eax,3
- mov [esi+E_Y],eax
- mov [esi+E_SY],eax
+
+ ; Center each complete ASCII design inside its own 26-cell column lane.
  mov eax,ebx
  xor edx,edx
- mov ecx,5
+ mov ecx,ENEMY_LANE_COUNT
  div ecx
- imul edx,13
- add edx,10
+ mov edi,eax
+ imul edx,ENEMY_LANE_WIDTH
+ add edx,(SCREEN_WIDTH-ENEMY_LANE_COUNT*ENEMY_LANE_WIDTH)/2
+ mov eax,[esi+E_TYPE]
+ imul eax,T_SIZE
+ mov ecx,ENEMY_LANE_WIDTH
+ sub ecx,[type_table+eax+T_W]
+ shr ecx,1
+ add edx,ecx
  mov [esi+E_X],edx
  mov [esi+E_SX],edx
+
+ cmp edi,0
+ jne .rear_start
+ mov eax,ENEMY_FRONT_TOP
+ mov ecx,ENEMY_FRONT_BAND_HEIGHT
+ jmp .start_y
+.rear_start:
+ mov eax,ENEMY_REAR_TOP
+ mov ecx,ENEMY_REAR_BAND_HEIGHT
+.start_y:
+ mov edx,[esi+E_TYPE]
+ imul edx,T_SIZE
+ sub ecx,[type_table+edx+T_H]
+ shr ecx,1
+ add eax,ecx
+ mov [esi+E_Y],eax
+ mov [esi+E_SY],eax
  mov dword [esi+E_ACTIVE],1
  mov eax,200
  mov ecx,501              ; Each enemy chooses a new 200-700 ms move delay.
  call random_in_range
+ call scale_difficulty_interval
  mov [enemy_move_intervals+ebx*4],eax
  call choose_enemy_target
  mov eax,[esi+E_TYPE]
@@ -184,6 +277,7 @@ initialize_enemies:
  mov eax,200
  mov ecx,401
  call random_in_range
+ call scale_difficulty_interval
  mov [enemy_move_intervals],eax
  call random_attack_delay
  mov [enemy_fire_intervals],eax
@@ -551,6 +645,7 @@ update_enemies:
  mov eax,200
  mov ecx,501
  call random_in_range
+ call scale_difficulty_interval
  mov [enemy_move_intervals+ebx*4],eax
 .fire_timer:
  mov eax,[esi+E_TYPE]
