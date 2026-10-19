@@ -18,6 +18,8 @@ TEST_MENU_X equ (SCREEN_WIDTH-80)/2
 TEST_MENU_Y equ (SCREEN_HEIGHT-25)/2
 TEST_MENU_TITLE_X equ (SCREEN_WIDTH-title_art_width)/2
 TEST_MENU_DIFFICULTY_X equ (SCREEN_WIDTH-difficulty_text_width)/2
+TEST_GAMEOVER_TITLE_X equ (SCREEN_WIDTH-gameover_art_width)/2
+TEST_VICTORY_TITLE_X equ (SCREEN_WIDTH-victory_text_width)/2
 TEST_CUPCAKE_Y equ ENEMY_FRONT_TOP+(ENEMY_FRONT_BAND_HEIGHT-SOURCE_ART_HEIGHT)/2
 ; Assertions exercise compiled game routines, not a reimplementation/model.
 %macro check 3
@@ -504,9 +506,15 @@ tests_start:
  call draw_game
  check word [back_buffer+(TOP*SCREEN_WIDTH+34)*2],0F23h,'full-size Ratatouille art renders'
  call show_game_over
- check word [back_buffer+((7+TEST_MENU_Y)*SCREEN_WIDTH+30+TEST_MENU_X)*2],0C47h,'game over renders'
+ check word [back_buffer+(RESULT_TITLE_ROW*SCREEN_WIDTH+TEST_GAMEOVER_TITLE_X)*2],0C47h,'game over title is centered'
+ check word [back_buffer+(RESULT_ART_ROW*SCREEN_WIDTH+36)*2],0F23h,'game over previews Ratatouille art'
+ check word [back_buffer+(RESULT_ART_ROW*SCREEN_WIDTH+62)*2],0F23h,'game over previews Chef art'
+ check word [back_buffer+((RESULT_ART_ROW-1)*SCREEN_WIDTH+89)*2],0E23h,'game over previews fireball art'
+ mov dword [score],1220
  call show_victory
- check word [back_buffer+((7+TEST_MENU_Y)*SCREEN_WIDTH+22+TEST_MENU_X)*2],0A4Bh,'victory renders'
+ check word [back_buffer+(RESULT_TITLE_ROW*SCREEN_WIDTH+TEST_VICTORY_TITLE_X)*2],0A4Bh,'victory title is centered'
+ check word [back_buffer+(RESULT_SCORE_VALUE_ROW*SCREEN_WIDTH+64)*2],0F31h,'victory score starts centered'
+ check word [back_buffer+(RESULT_SCORE_VALUE_ROW*SCREEN_WIDTH+67)*2],0F30h,'victory score ends centered'
 %ifdef VISUAL_TEST
  ; Optional manual capture mode: the normal self-test has already completed
  ; the full campaign simulation and verified VICTORY before reaching here.

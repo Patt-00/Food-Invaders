@@ -91,3 +91,11 @@ The regular enemy bands now begin at rows 5 and 32. Ratatouille selects vertical
 NASM 3.02 rebuilt the game and test binaries with warnings treated as errors. DOSBox-X 2026.10.01 ran `RUNTEST.BAT` on normal and dynamic 386 cores. `TEST.COM` passed 40,312 assertions on each core. `PBTEST.COM` and `COLLTEST.COM` also reported PASS on both cores. All COM files remain below 60,000 bytes. The current game and core-test hashes are recorded in `tests/integrated-binary-hashes.json`.
 
 A live DOSBox-X window showed the revised title screen and gameplay. The start key, one movement input, and one weapon input were sent. The screen changed to gameplay, the Chef moved, and the weapon cooldown changed to `WAIT`. The updated screen was captured through the desktop screenshot tool. Group review and acceptance of the proportions remain outstanding.
+
+## Follow-up: result-screen artwork and score
+
+Game-over and victory screens now preview the full-size Chef, Ratatouille, and fireball designs. The screens center the result title, score value, and restart or quit instructions. Seven core assertions check the result title positions, preview artwork cells, and the rendered score digits.
+
+NASM 3.02 rebuilt the game and test files with warnings treated as errors. DOSBox-X 2026.10.01 passed `RUNTEST.BAT` on normal and dynamic 386 cores. `TEST.COM` passed 40,317 assertions on each core; `PBTEST.COM` and `COLLTEST.COM` also reported PASS. The core-test binaries and game remain below 60,000 bytes. The current game and core-test hashes are recorded in `tests/integrated-binary-hashes.json`.
+
+An interactive DOSBox-X run of `WINTEST.COM` displayed the victory screen and score 1,220 after the test harness simulated the campaign. This verifies the renderer and automated campaign path. It is not evidence of a human playthrough.

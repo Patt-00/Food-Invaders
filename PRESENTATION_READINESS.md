@@ -18,7 +18,7 @@ The intended users are the CS 003 project group and classmates who can play the 
 | Input | `INT 16h` checks the keyboard buffer. `main.asm` accepts only assigned keys and ignores other keys while play continues. |
 | State | `variables.inc` defines shared screen, player, enemy, weapon, difficulty, stage, and power-up state. |
 | Gameplay modules | `modules/player.asm`, `bullet.asm`, `enemy.asm`, `collision.asm`, `encounter.asm`, and `features.asm` update the simulation. |
-| Rendering and screens | `modules/display.asm` draws the HUD and game field. `modules/menu.asm` draws the title, ASCII preview, game-over, and victory screens. |
+| Rendering and screens | `modules/display.asm` draws the HUD and game field. `modules/menu.asm` draws the title, ASCII preview, game-over, and victory screens. Result screens reuse full-size Chef, Ratatouille, and fireball art. |
 | External services | None. The game does not use authentication, a server, a database, or a network connection. |
 
 Each game iteration polls input, updates state and timers, resolves collisions and stage events, draws the ASCII frame, and waits about 50 milliseconds before the next iteration. The five-stage campaign clears four food-enemy stages before presenting the 20-HP Ratatouille boss.
@@ -96,4 +96,4 @@ If DOSBox-X cannot launch during the presentation, show the repository's source 
 
 ## Readiness status
 
-The current code has passed its automated DOSBox-X suites on normal and dynamic CPU cores. A live menu, game start, movement input, and weapon input were observed on this host. LibreOffice 26.2.6.3 imported the ten-slide deck and rendered a ten-page PDF for visual inspection. The group has not rehearsed the full campaign, reviewed the updated proportions, confirmed speaking assignments, or updated the course Google Doc. The ten-slide editable deck is [available here](presentation/Food-Invaders-Final-Presentation.pptx). The group still needs to open and approve it in the target PowerPoint or Google Slides application.
+The current code passes the automated DOSBox-X suites on normal and dynamic CPU cores. A live menu, game start, movement input, and weapon input were observed on this host. `WINTEST.COM` showed the victory result after its automated campaign simulation; this is not a human playthrough. LibreOffice 26.2.6.3 imported the revised ten-slide deck and rendered a ten-page PDF. I inspected the updated verification slide in that render. The group has not rehearsed the full campaign, reviewed the updated proportions, confirmed speaking assignments, or updated the course Google Doc. The ten-slide editable deck is [available here](presentation/Food-Invaders-Final-Presentation-v2.pptx). The group still needs to open and approve it in the target PowerPoint or Google Slides application.

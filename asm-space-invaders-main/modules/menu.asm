@@ -17,6 +17,12 @@ MENU_DIFFICULTY_ROW equ 72
 MENU_START_ROW equ 76
 MENU_QUIT_ROW equ 79
 MENU_RULE_BOTTOM_ROW equ 83
+RESULT_ART_ROW equ 21
+RESULT_ART_LABEL_ROW equ 40
+RESULT_TITLE_ROW equ 48
+RESULT_SCORE_LABEL_ROW equ 54
+RESULT_SCORE_VALUE_ROW equ 56
+RESULT_HINT_ROW equ 61
 
 menu_rule_text db '================================================================================',0
 menu_subtitle_text db 'THE KITCHEN IS UNDER ATTACK',0
@@ -41,6 +47,7 @@ chef_label db 'CHEF',0
 rolling_pin_label db 'ROLLING PIN',0
 fireball_label db 'FIREBALL',0
 victory_text db 'KITCHEN SAVED - RATATOUILLE DEFEATED!',0
+victory_text_width equ $ - victory_text - 1
 result_text db 'FINAL SCORE:',0
 
 show_main_menu:
@@ -230,13 +237,43 @@ print_centered_string:
  popad
  ret
 
+; Center the DWORD in EAX on row DH with attribute BL. All registers preserved.
+print_centered_number32:
+ pushad
+ movzx ebp,dh
+ movzx edi,bl
+ mov esi,number_buffer+11
+ mov byte [esi],0
+ mov ecx,10
+.digit:
+ xor edx,edx
+ div ecx
+ add dl,'0'
+ dec esi
+ mov [esi],dl
+ test eax,eax
+ jnz .digit
+ mov ebx,number_buffer+11
+ sub ebx,esi
+ mov eax,SCREEN_WIDTH
+ sub eax,ebx
+ shr eax,1
+ mov edx,ebp
+ shl edx,8
+ mov dl,al
+ mov ebx,edi
+ call print_string
+ popad
+ ret
+
 show_game_over:
  pushad
  call clear_screen
- mov dx,071Eh + ((SCREEN_HEIGHT-25)/2)*256 + (SCREEN_WIDTH-80)/2
+ call draw_result_preview
  mov bl,0Ch
  mov si,gameover_art_line1
- call print_string
+ mov dh,RESULT_TITLE_ROW
+ call print_centered_string
  call draw_result
  popad
  ret
@@ -244,25 +281,65 @@ show_game_over:
 show_victory:
  pushad
  call clear_screen
- mov dx,0716h + ((SCREEN_HEIGHT-25)/2)*256 + (SCREEN_WIDTH-80)/2
+ call draw_result_preview
  mov bl,0Ah
+ mov dh,RESULT_TITLE_ROW
  mov si,victory_text
- call print_string
+ call print_centered_string
  call draw_result
+ popad
+ ret
+
+; Result screens reuse the native-size ASCII art shown during gameplay.
+draw_result_preview:
+ pushad
+ mov eax,36
+ mov edx,RESULT_ART_ROW
+ mov esi,art_rat
+ mov ecx,15
+ mov ebp,16
+ mov bl,0Fh
+ call draw_rectangle_art
+ mov eax,60
+ mov edx,RESULT_ART_ROW
+ mov esi,player_art
+ mov ecx,PLAYER_WIDTH
+ mov ebp,PLAYER_HEIGHT
+ mov bl,0Fh
+ call draw_rectangle_art
+ mov eax,83
+ mov edx,RESULT_ART_ROW-1
+ mov esi,art_fireball
+ mov ecx,PICKUP_WIDTH
+ mov ebp,PICKUP_HEIGHT
+ mov bl,0Eh
+ call draw_rectangle_art
+ mov bl,0Fh
+ mov dh,RESULT_ART_LABEL_ROW
+ mov dl,38
+ mov si,boss_label
+ call print_string
+ mov dl,64
+ mov si,chef_label
+ call print_string
+ mov dl,86
+ mov si,fireball_label
+ call print_string
  popad
  ret
 
 draw_result:
  mov bl,0Fh
- mov dx,0A1Eh + ((SCREEN_HEIGHT-25)/2)*256 + (SCREEN_WIDTH-80)/2
+ mov dh,RESULT_SCORE_LABEL_ROW
  mov si,result_text
- call print_string
- mov dl,43+(SCREEN_WIDTH-80)/2
+ call print_centered_string
  mov eax,[score]
- call print_number32
- mov dx,0E16h + ((SCREEN_HEIGHT-25)/2)*256 + (SCREEN_WIDTH-80)/2
+ mov dh,RESULT_SCORE_VALUE_ROW
+ call print_centered_number32
+ mov bl,0Eh
+ mov dh,RESULT_HINT_ROW
  mov si,over_hint_text
- call print_string
+ call print_centered_string
  call present_screen
  ret
 
