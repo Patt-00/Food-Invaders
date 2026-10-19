@@ -10,8 +10,8 @@
 | Remaining gap | 18 percentage points |
 | Repository | `https://github.com/Patt-00/asm-space-invaders.git` |
 | Working branch | `codex/finish-polish` |
-| Current verified source base | `f5fb129` |
-| Source branch synchronization | Pending final commit and push for this work cycle |
+| Verified release commit | `d0a934c` |
+| Source branch synchronization | Verified. `origin/main` read back `d0a934c231fd80e0d4cffcd597fbe047d2fedcb7`. |
 | Goal status | Incomplete. Group and course-document actions remain open. |
 
 The estimate uses the weighted rubric in `COMPLETION_AUDIT.md`. The first audit scored functionality 35/35, UI 8/15, technical reliability 16/20, repository 7/10, testing 9/10, and presentation readiness 1/10. Current scores are 35/35, 10/15, 16/20, 7/10, 9/10, and 5/10. The six-point increase reflects a tested title-screen layout change and the creation and validation of the ten-slide presentation package.
