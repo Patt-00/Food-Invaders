@@ -24,7 +24,7 @@ The estimate uses the weighted rubric in `COMPLETION_AUDIT.md`. The first audit 
 | 2026-10-20 | Moved the regular enemy bands lower and adjusted the boss's minimum vertical target row. | NASM assembled all five COM files with warnings treated as errors. DOSBox-X 2026.10.01 passed `TEST.COM`, `PBTEST.COM`, and `COLLTEST.COM` on normal and dynamic 386 cores. The core suite passed 40,312 assertions on each core. |
 | 2026-10-20 | Audited the actual CS 003 requirements and the current group report without editing the Google Doc. | Read-only Google Drive review identified old screen dimensions and test counts, blank Appendix C, missing Appendix D evidence, pending library reference, and group review items. |
 | 2026-10-20 | Added the weighted completion audit and presentation-readiness guide. | `COMPLETION_AUDIT.md` assigns status, points, evidence, remaining work, and priority to project-specific requirements. |
-| 2026-10-20 | Created a ten-slide editable PowerPoint with presenter notes. | Artifact Tool finalization passed package integrity, layout geometry, font policy, and first-party import checks. All ten rendered slides were inspected at full size; slide 9 was corrected after the visual review. |
+| 2026-10-20 | Created a ten-slide editable PowerPoint with presenter notes. | Artifact Tool finalization passed package integrity, layout geometry, font policy, and first-party import checks. LibreOffice 26.2.6.3 imported the deck and rendered ten PDF pages; all ten were inspected at full size. Slide 9 was corrected after the first visual review. |
 
 ## Remaining backlog
 
