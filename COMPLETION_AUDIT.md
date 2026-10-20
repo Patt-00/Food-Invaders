@@ -1,14 +1,33 @@
 # Completion audit
 
-## Current estimate
+## Active code and game scope
 
-**Current completion: 84%**
+The active goal covers the Assembly source and the playable DOSBox-X game. It excludes the DOCX and other course, group, and presentation deliverables.
+
+**Code and game completion: 100%**
+
+**Remaining code and game gap: none identified**
+
+| Acceptance item | Current state | Evidence |
+|---|---|---|
+| Warning-clean build and COM size budget | COMPLETE AND VERIFIED | NASM built `INVADERS.COM`, `TEST.COM`, `PBTEST.COM`, `COLLTEST.COM`, and `WINTEST.COM` with `-Wall -w-reloc -Werror`; every binary is below 60,000 bytes. |
+| Automated game logic and campaign | COMPLETE AND VERIFIED | DOSBox-X 2026.10.01 passed `TEST.COM`, `PBTEST.COM`, and `COLLTEST.COM` on normal and dynamic 386 cores. `TEST.COM` reports 40,317 assertions, including the five-stage campaign and 20,000 simulation ticks. |
+| DOSBox-X launch and visible gameplay | COMPLETE AND VERIFIED | The game launched with SVGA S3 at 132 by 88 cells. Virtual-display captures show the full menu, gameplay field, Chef, enemy bands, and HUD. |
+| Input, weapons, incoming fire, and player loss | COMPLETE AND VERIFIED | A DOSBox-X play session selected Normal and Hard, moved the Chef, fired both weapons, displayed hostile shots, reduced lives on a hit, showed Game Over, restarted with `R`, and quit with Escape. |
+| Enemy spacing and breach behavior | COMPLETE AND VERIFIED | The initial rear-band-to-Chef gap is 30 rows. Each lane pair now descends on its own randomized timer. `tests/collision.asm` verifies lane-pair descent, an actual `simulate_tick` breach, one-life resolution, and reset behavior. |
+| Victory and result screens | COMPLETE AND VERIFIED | `WINTEST.COM` displayed the victory screen after the automated campaign, then reported PASS for 40,317 assertions. A live Hard-mode run displayed Game Over and restarted successfully. |
+
+The full campaign was verified by the real-mode simulation, not a human-length playthrough. The virtual DOSBox-X run covered the menu, controls, weapons, hostile hits, game over, restart, and quit. No source or game blocker remains within the active scope.
+
+## Broader project estimate
+
+**Broader project completion: 84%**
 
 **Target completion: 100%**
 
 **Remaining gap: 16 percentage points**
 
-This estimate measures verified work against the CS 003 project requirements and the current repository. It does not represent a grade. The project is an offline, single-player DOS game, so authentication, user roles, network services, and database persistence do not apply and do not reduce the score.
+This estimate measures the full CS 003 project, including course documents, group confirmation, and presentation readiness. Those deliverables are outside the active code and game goal. The score does not represent a grade. The project is an offline, single-player DOS game, so authentication, user roles, network services, and database persistence do not apply and do not reduce the score.
 
 The calculation assigns points to measurable requirements inside six weighted categories. A point counts only when source, test output, or a live observation supports it. The reports in `tests/integrated-normal-result.txt`, `tests/integrated-dynamic-result.txt`, and `tests/integrated-binary-hashes.json` are the test evidence for the current source revision.
 
@@ -30,11 +49,11 @@ The sub-requirements below sum to each category's assigned weight.
 |---|---|---:|---|---|---|
 | Menu, keyboard polling, valid controls, ignored keys, restart, and quit | COMPLETE AND VERIFIED | 7 / 7 | `main.asm`, `modules/menu.asm`, `tests/core.asm`, `tests/integrated-normal-result.txt`, `tests/integrated-dynamic-result.txt`; a live start input reached gameplay. | None identified in the tested path. | Low |
 | Chef movement, both weapons, fireball effects, lives, and score | COMPLETE AND VERIFIED | 7 / 7 | `modules/player.asm`, `modules/bullet.asm`, `modules/features.asm`, `tests/player-bullet.asm`; suite passes on both CPU cores. | None identified in the tested path. | Low |
-| Independent enemy movement and firing, collision, invulnerability, and life-loss aggregation | COMPLETE AND VERIFIED | 7 / 7 | `modules/enemy.asm`, `modules/collision.asm`, `modules/encounter.asm`, and both DOSBox-X suite outputs. `tests/collision.asm` verifies first-overlap hits at the Chef's head and outer edge, plus half-open boundary misses. | None identified in the tested collision paths. | Low |
+| Independent enemy movement and firing, collision, invulnerability, and life-loss aggregation | COMPLETE AND VERIFIED | 7 / 7 | `modules/enemy.asm`, `modules/collision.asm`, `modules/encounter.asm`, and both DOSBox-X suite outputs. `tests/collision.asm` verifies first-overlap head hits, half-open edges, independent lane descent, and a bottom breach through `simulate_tick`. | None identified in the tested collision paths. | Low |
 | Difficulty, four regular stages, boss stage, victory, defeat, restart, and state reset | COMPLETE AND VERIFIED | 9 / 9 | `main.asm`, `modules/menu.asm`, `modules/encounter.asm`, five-stage campaign assertions in `tests/core.asm`. | A full human playthrough to victory and game over remains presentation QA, not a code-path test gap. | Medium |
 | Meaningful Space Invaders modification using offline Assembly and DOSBox-X | COMPLETE AND VERIFIED | 5 / 5 | NASM 16-bit real-mode `.COM` source, dual weapons, timed power-ups, difficulty levels, randomized enemies, stage progression, and the Ratatouille boss. | None identified for the stated course option. | Low |
 | Full-size ASCII artwork and title-screen preview | COMPLETE AND VERIFIED | 4 / 4 | `assets/`, `modules/display.asm`, `modules/menu.asm`, and ten new menu-render assertions in `tests/core.asm`; the live title screen was captured. | Group should review the current screen before submission. | Medium |
-| 132 by 88 viewport and vertical game composition | IMPLEMENTED BUT UNVERIFIED | 3 / 6 | `variables.inc` sets 17-row enemy bands at rows 5 and 24, leaving a 30-row gap from the rear band to the Chef's initial top row. DOSBox-X loaded the rebuilt 1,056 by 704 game field. | The user and group have not tested the rebuilt spacing in live play. | High |
+| 132 by 88 viewport and vertical game composition | IMPLEMENTED BUT UNVERIFIED | 3 / 6 | `variables.inc` sets 17-row enemy bands at rows 5 and 24, leaving a 30-row initial gap from the rear band to the Chef. DOSBox-X Xvfb captures show the rebuilt 1,056 by 704 field and staggered lane descent. | The group has not reviewed the revised proportions on the presentation computer. | High |
 | HUD, instructions, result screens, and visual feedback | COMPLETE AND VERIFIED | 4 / 4 | Menu instructions, gameplay HUD, and both result-state code paths are covered by core assertions. `WINTEST.COM` displayed the victory artwork, title, score, and restart hints in DOSBox-X after the automated campaign simulation. | The group still needs to review the updated screen proportions and HUD. Add screenshots to the course document after the group reviews them. | Medium |
 | Single supported DOS text mode | COMPLETE AND VERIFIED | 1 / 1 | The course project targets an offline emulator. DOSBox-X displays the single configured 132 by 88 mode. | No second display size is specified by the project requirements. | Low |
 | Warning-clean NASM builds and COM size limit | COMPLETE AND VERIFIED | 6 / 6 | `nasm -f bin -Wall -w-reloc -Werror` built `INVADERS.COM`, `TEST.COM`, `PBTEST.COM`, `COLLTEST.COM`, and `WINTEST.COM`. Current sizes are below 60,000 bytes. | Run the documented PowerShell wrapper on Windows if Windows is a submission target. | Low |
@@ -48,7 +67,7 @@ The sub-requirements below sum to each category's assigned weight.
 | Course document, screenshots, and required appendices | BROKEN | 0 / 2 | Duplicate Chapter 5 tabs contain 40,285 and 40,296-assertion claims, `CORETEST.COM`, a DOSBox Staging capture, and 132 by 120 pixels. Current source uses `TEST.COM`, passes 40,317 assertions, and uses 132 by 88. The output description says INT 10h draws the screen; current rendering copies a back buffer to B800h. Appendix C has no link, Appendix D proof cells are blank, and the library reference is pending. | Update and visually verify the course document after explicit approval. Confirm which original-game or code sources need citations. The current instruction is to leave that Google Doc unchanged. | High |
 | DOSBox-X normal and dynamic core test suites | COMPLETE AND VERIFIED | 6 / 6 | `RUNTEST.BAT` passed under DOSBox-X 2026.10.01 on normal and dynamic 386 cores. `TEST.COM` reports 40,317 assertions; `PBTEST.COM` and `COLLTEST.COM` report PASS. | None for automated suites on this host. | Low |
 | Automated campaign, stress, art, collision, and player coverage | COMPLETE AND VERIFIED | 2 / 2 | Core suite covers 20,000 simulation ticks, the five-stage campaign, and rendered ASCII cells. Player and collision suites cover their named APIs and edge cases. | None identified in current suite scope. | Low |
-| Manual end-to-end playthrough | PARTIALLY IMPLEMENTED | 1 / 2 | Live DOSBox-X launch, start, movement, and firing were observed. | Play through a full campaign and a game-over case on the presentation setup. | High |
+| Manual end-to-end playthrough | PARTIALLY IMPLEMENTED | 1 / 2 | Xvfb DOSBox-X interaction covered menu selection, movement, both weapons, hostile damage, game over, restart, and quit. `TEST.COM` and `WINTEST.COM` cover the full five-stage campaign and victory. | A human-length campaign on the presentation computer has not been played. | High |
 | Ten-slide presentation and speaker notes | IMPLEMENTED BUT UNVERIFIED | 3 / 4 | The [editable presentation deck](presentation/Food-Invaders-Final-Presentation-v2.pptx) contains ten slides and presenter notes. Artifact Tool checks passed, and LibreOffice 26.2.6.3 imported the deck and rendered a ten-page PDF that was visually inspected. | Have the group review facts and slide assignments. Open the deck in the target PowerPoint or Google Slides application before delivery. | High |
 | Demo requirements, sequence, and fallback | COMPLETE AND VERIFIED | 2 / 2 | `PRESENTATION_READINESS.md` documents build/run commands, controls, demo sequence, risks, and a clearly labeled non-live fallback. | Rehearse on the presentation computer. | High |
 | Member participation and actual code contributions | BLOCKED | 0 / 2 | The course document lists six report-section assignments, but proof cells are blank. Those assignments do not establish each member's code contribution or presentation readiness. | Each member confirms their contribution and speaking part; fill Appendix D with evidence. | High |

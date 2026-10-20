@@ -73,6 +73,9 @@ ENEMY_FRONT_BAND_HEIGHT equ 17
 ENEMY_REAR_TOP equ 24
 ENEMY_REAR_BAND_HEIGHT equ 17
 ENEMY_CHEF_GAP equ (SCREEN_HEIGHT - PLAYER_HEIGHT - 1) - (ENEMY_REAR_TOP + ENEMY_REAR_BAND_HEIGHT)
+ENEMY_LANE_DROP_MIN_MS equ 5000
+ENEMY_LANE_DROP_RANGE_MS equ 5001
+ENEMY_LANE_DROP_STAGE_ACCEL_MS equ 500
 BOSS_MIN_Y equ 6
 BOSS_Y_RANGE equ 21
 
@@ -87,6 +90,9 @@ BOSS_Y_RANGE equ 21
 %endif
 %if ENEMY_CHEF_GAP < 20
     %error "Rear enemies must leave at least 20 rows before the Chef"
+%endif
+%if ENEMY_LANE_DROP_MIN_MS <= ENEMY_LANE_DROP_STAGE_ACCEL_MS * 3
+    %error "Regular enemies must keep a positive lane-drop interval"
 %endif
 
 %define LEFT 0
@@ -184,6 +190,9 @@ enemy_fire_timers times MAX_ENEMIES dd 0
 enemy_fire_intervals times MAX_ENEMIES dd 0
 enemy_target_x times MAX_ENEMIES db 0
 enemy_target_y times MAX_ENEMIES db 0
+enemy_lane_drop_timers times ENEMY_LANE_COUNT dd 0
+enemy_lane_drop_intervals times ENEMY_LANE_COUNT dd 0
+enemy_lane_descent times ENEMY_LANE_COUNT db 0
 random_state dd 0x6D2B79F5
 
 invulnerable dd 0

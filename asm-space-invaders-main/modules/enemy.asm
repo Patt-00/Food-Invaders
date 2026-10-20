@@ -54,6 +54,18 @@ random_attack_delay:
  call scale_difficulty_interval
  ret
 
+; random_enemy_lane_drop_interval(): scaled delay before one lane descends.
+random_enemy_lane_drop_interval:
+ mov eax,ENEMY_LANE_DROP_MIN_MS
+ mov ecx,ENEMY_LANE_DROP_RANGE_MS
+ call random_in_range
+ mov ecx,[current_wave]
+ dec ecx
+ imul ecx,ENEMY_LANE_DROP_STAGE_ACCEL_MS
+ sub eax,ecx
+ call scale_difficulty_interval
+ ret
+
 ; scale_difficulty_interval(): EAX=base delay; return adjusted delay.
 ; Easy is 1.5x slower, normal is unchanged, hard is 0.75x faster.
 scale_difficulty_interval:
@@ -84,12 +96,13 @@ choose_enemy_target:
  push ecx
  push edx
  push edi
+ push ebp
  cmp dword [boss_mode],0
  jne .boss_target
 
  ; Regular sprites stay within one of five columns and one of two vertical
- ; bands. Their largest source design is 22 cells wide, so these lanes keep
- ; all ten detailed drawings readable without overlapping one another.
+ ; bands. Each column applies its own descent offset to both enemies, while
+ ; the largest 22-cell design stays inside its lane.
  mov edx,[esi+E_TYPE]
  imul edx,T_SIZE
  mov edi,[type_table+edx+T_W]
@@ -97,6 +110,7 @@ choose_enemy_target:
  xor edx,edx
  mov ecx,ENEMY_LANE_COUNT
  div ecx
+ movzx ebp,byte [enemy_lane_descent+edx]
  imul edx,ENEMY_LANE_WIDTH
  add edx,(SCREEN_WIDTH-ENEMY_LANE_COUNT*ENEMY_LANE_WIDTH)/2
  mov ecx,ENEMY_LANE_WIDTH
@@ -113,10 +127,12 @@ choose_enemy_target:
  test eax,eax
  jnz .rear_band
  mov eax,ENEMY_FRONT_TOP
+ add eax,ebp
  mov ecx,ENEMY_FRONT_BAND_HEIGHT
  jmp .target_y
 .rear_band:
  mov eax,ENEMY_REAR_TOP
+ add eax,ebp
  mov ecx,ENEMY_REAR_BAND_HEIGHT
 .target_y:
  mov edx,[esi+E_TYPE]
@@ -141,6 +157,7 @@ choose_enemy_target:
  call random_in_range
  mov [enemy_target_y+ebx],al
 .done:
+ pop ebp
  pop edi
  pop edx
  pop ecx
@@ -158,10 +175,17 @@ initialize_enemies:
  cld
  a32 rep stosd
  ; The next four per-enemy timer/interval tables are contiguous; clear all
- ; four tables so no movement or firing delay carries into the next stage.
+ ; four so movement and firing delays do not carry into the next stage.
  mov edi,enemy_move_timers
  mov ecx,MAX_ENEMIES*4
  a32 rep stosd
+ ; Lane descent timers restart independently for each formation.
+ mov edi,enemy_lane_drop_timers
+ mov ecx,ENEMY_LANE_COUNT*2
+ a32 rep stosd
+ mov edi,enemy_lane_descent
+ mov ecx,ENEMY_LANE_COUNT
+ a32 rep stosb
  mov [enemy_events],eax
  mov [completion_sent],eax
  mov [move_timer],eax
@@ -194,6 +218,13 @@ initialize_enemies:
  mov [attack_interval_range],eax
  mov dword [move_interval],300 ; Legacy field; live movement uses per-enemy random timers.
  mov dword [alive_count],MAX_ENEMIES
+ xor ebx,ebx
+.lane_drop_intervals:
+ call random_enemy_lane_drop_interval
+ mov [enemy_lane_drop_intervals+ebx*4],eax
+ inc ebx
+ cmp ebx,ENEMY_LANE_COUNT
+ jb .lane_drop_intervals
  xor ebx,ebx
  mov esi,enemies
 .regular:
@@ -287,11 +318,18 @@ initialize_enemies:
  pop ebx
  ret
 
-; reset_enemy_positions(): preserves HP/dead slots and resets timers/direction.
+; reset_enemy_positions(): preserves HP/dead slots and resets movement/drop timers.
 reset_enemy_positions:
  push esi
  push edi
  push ebx
+ xor eax,eax
+ mov edi,enemy_lane_descent
+ mov ecx,ENEMY_LANE_COUNT
+ a32 rep stosb
+ mov edi,enemy_lane_drop_timers
+ mov ecx,ENEMY_LANE_COUNT
+ a32 rep stosd
  mov esi,enemies
  xor edi,edi
  mov ecx,MAX_ENEMIES
@@ -667,9 +705,50 @@ update_enemies:
  inc ebx
  cmp ebx,MAX_ENEMIES
  jb .wander
- jmp .done
-.breach:
- or dword [enemy_events],EV_BREACH
+ jmp .lane_descent
+.lane_descent:
+ ; Lane pairs descend on separate timers, so the formation never steps down
+ ; as one synchronized block.
+ cmp dword [boss_mode],0
+ jne .done
+ xor ebx,ebx
+.lane:
+ mov eax,[enemy_lane_drop_timers+ebx*4]
+ add eax,50
+ cmp eax,[enemy_lane_drop_intervals+ebx*4]
+ jb .store_lane_timer
+ sub eax,[enemy_lane_drop_intervals+ebx*4]
+ mov [enemy_lane_drop_timers+ebx*4],eax
+ inc byte [enemy_lane_descent+ebx]
+
+ mov esi,enemies
+ mov eax,ebx
+ imul eax,E_SIZE
+ add esi,eax
+ cmp dword [esi+E_ACTIVE],0
+ je .rear_lane
+ inc dword [esi+E_Y]
+ inc byte [enemy_target_y+ebx]
+.rear_lane:
+ mov esi,enemies
+ mov eax,ebx
+ add eax,ENEMY_LANE_COUNT
+ imul eax,E_SIZE
+ add esi,eax
+ cmp dword [esi+E_ACTIVE],0
+ je .reschedule_lane
+ inc dword [esi+E_Y]
+ inc byte [enemy_target_y+ebx+ENEMY_LANE_COUNT]
+.reschedule_lane:
+ call random_enemy_lane_drop_interval
+ mov [enemy_lane_drop_intervals+ebx*4],eax
+ jmp .next_lane
+.store_lane_timer:
+ mov [enemy_lane_drop_timers+ebx*4],eax
+.next_lane:
+ inc ebx
+ cmp ebx,ENEMY_LANE_COUNT
+ jb .lane
 .done:
  popad
  ret
