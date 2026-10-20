@@ -198,6 +198,45 @@ start:
     cmp si, contact_cases_end
     jb .contact_case
 
+    ; A hostile marker overlapping the Chef's first visible head row counts
+    ; immediately, so shots cannot pass through the top of the sprite.
+    call reset_state
+    mov byte [player_x], 60
+    mov byte [player_y], 60
+    mov dword [shots+S_ACTIVE], 1
+    mov dword [shots+S_X], 62
+    mov dword [shots+S_Y], 60
+    checked_call check_hostile_hits
+    expect_word loss_pending, 1, 'hostile shot hits the top row of the Chef'
+    expect_word shots+S_ACTIVE, 0, 'head hit consumes hostile shot'
+
+    ; The full-width hitbox includes the Chef's outer edge and excludes
+    ; projectiles that only touch its right or top boundary.
+    call reset_state
+    mov byte [player_x], 60
+    mov byte [player_y], 60
+    mov dword [shots+S_ACTIVE], 1
+    mov dword [shots+S_X], 60+PLAYER_WIDTH-HOSTILE_SHOT_WIDTH+1
+    mov dword [shots+S_Y], 64
+    checked_call check_hostile_hits
+    expect_word loss_pending, 1, 'hostile shot hits the Chef outer edge'
+    expect_word shots+S_ACTIVE, 0, 'outer-edge hit consumes hostile shot'
+
+    call reset_state
+    mov byte [player_x], 60
+    mov byte [player_y], 60
+    mov dword [shots+S_ACTIVE], 1
+    mov dword [shots+S_X], 60+PLAYER_WIDTH
+    mov dword [shots+S_Y], 64
+    checked_call check_hostile_hits
+    expect_word loss_pending, 0, 'hostile shot touching the right edge misses'
+    expect_word shots+S_ACTIVE, 1, 'edge miss preserves hostile shot'
+    mov dword [shots+S_X], 62
+    mov dword [shots+S_Y], 60-HOSTILE_SHOT_HEIGHT
+    checked_call check_hostile_hits
+    expect_word loss_pending, 0, 'hostile shot touching the top edge misses'
+    expect_word shots+S_ACTIVE, 1, 'top-edge miss preserves hostile shot'
+
     ; Life exhaustion, including an already-zero life counter, never wraps.
     call reset_state
     mov byte [enemy_x], 60

@@ -13,10 +13,10 @@ BULLET_SPEED    equ 2        ; Keeps a shot in the shorter viewport through its 
 HOSTILE_SHOT_WIDTH equ 2
 HOSTILE_SHOT_HEIGHT equ 2
 HOSTILE_SHOT_STEP_MS equ 200 ; Enemy shots advance more slowly than each 50 ms game tick.
-PLAYER_DANGER_WIDTH equ 4   ; Narrow center of the Chef is vulnerable to enemy shots.
-PLAYER_DANGER_HEIGHT equ 6
-PLAYER_DANGER_X equ (PLAYER_WIDTH - PLAYER_DANGER_WIDTH) / 2
-PLAYER_DANGER_Y equ (PLAYER_HEIGHT - PLAYER_DANGER_HEIGHT) / 2
+PLAYER_HITBOX_X equ 0
+PLAYER_HITBOX_Y equ 0
+PLAYER_HITBOX_WIDTH equ PLAYER_WIDTH
+PLAYER_HITBOX_HEIGHT equ PLAYER_HEIGHT
 
 ; VGA 32 KiB text memory and 8-bit coordinates bound this display mode.
 %if SCREEN_WIDTH != 132 || SCREEN_HEIGHT != 88
@@ -36,8 +36,8 @@ PLAYER_DANGER_Y equ (PLAYER_HEIGHT - PLAYER_DANGER_HEIGHT) / 2
 %if BULLET_SPEED < 1 || BULLET_SPEED > WEAPON_HEIGHT
     %error "Projectile steps must stay within sprite height to avoid skipped collisions"
 %endif
-%if PLAYER_DANGER_WIDTH < 1 || PLAYER_DANGER_WIDTH > PLAYER_WIDTH || PLAYER_DANGER_HEIGHT < 1 || PLAYER_DANGER_HEIGHT > PLAYER_HEIGHT
-    %error "Enemy-shot vulnerable area must fit inside the Chef sprite"
+%if PLAYER_HITBOX_X < 0 || PLAYER_HITBOX_Y < 0 || PLAYER_HITBOX_X + PLAYER_HITBOX_WIDTH > PLAYER_WIDTH || PLAYER_HITBOX_Y + PLAYER_HITBOX_HEIGHT > PLAYER_HEIGHT
+    %error "Enemy-shot hitbox must fit inside the Chef sprite"
 %endif
 MAX_BULLETS     equ 3
 CLEAVER         equ 0
@@ -69,9 +69,10 @@ ENEMY_HEIGHT    equ 16       ; Tallest food enemy source design.
 ENEMY_LANE_COUNT equ 5
 ENEMY_LANE_WIDTH equ (SCREEN_WIDTH / ENEMY_LANE_COUNT)
 ENEMY_FRONT_TOP equ 5
-ENEMY_FRONT_BAND_HEIGHT equ 21
-ENEMY_REAR_TOP equ 32
-ENEMY_REAR_BAND_HEIGHT equ 22
+ENEMY_FRONT_BAND_HEIGHT equ 17
+ENEMY_REAR_TOP equ 24
+ENEMY_REAR_BAND_HEIGHT equ 17
+ENEMY_CHEF_GAP equ (SCREEN_HEIGHT - PLAYER_HEIGHT - 1) - (ENEMY_REAR_TOP + ENEMY_REAR_BAND_HEIGHT)
 BOSS_MIN_Y equ 6
 BOSS_Y_RANGE equ 21
 
@@ -83,6 +84,9 @@ BOSS_Y_RANGE equ 21
 %endif
 %if ENEMY_REAR_TOP + ENEMY_REAR_BAND_HEIGHT > SCREEN_HEIGHT - PLAYER_HEIGHT - 1 - WEAPON_HEIGHT
     %error "Rear enemies must leave room for a full-size player shot"
+%endif
+%if ENEMY_CHEF_GAP < 20
+    %error "Rear enemies must leave at least 20 rows before the Chef"
 %endif
 
 %define LEFT 0

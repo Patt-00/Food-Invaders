@@ -291,15 +291,15 @@ tests_start:
  mov dword [loss_pending],1
  call resolve_game_events
  check byte [player_lives],0,'lives never underflow'
- ; Simultaneous final kill and player hit: aim inside the Chef's vulnerable
- ; center hitbox; loss is resolved before progression on the following tick.
+ ; Simultaneous final kill and player hit: aim at the top-left of the Chef's
+ ; full sprite hitbox; loss is resolved before progression on the next tick.
  call solo
  mov byte [bullet_active],1
  mov byte [bullets_damage],1
  mov byte [bullet_x],12
  mov byte [bullet_y],4
- push dword TEST_PLAYER_Y+PLAYER_DANGER_Y
- push dword TEST_PLAYER_X+PLAYER_DANGER_X
+ push dword TEST_PLAYER_Y+PLAYER_HITBOX_Y
+ push dword TEST_PLAYER_X+PLAYER_HITBOX_X
  call spawn_enemy_projectile
  add esp,8
  call simulate_tick

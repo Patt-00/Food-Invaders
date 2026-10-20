@@ -114,28 +114,28 @@ check_hostile_hits:
 .loop:
  cmp dword [esi+S_ACTIVE],0
  je .next
- ; Projectile rectangle must overlap the small central danger area, not the
- ; Chef's entire decorative 12x16 sprite. This leaves clear lanes to dodge.
+ ; Use the full Chef sprite bounds so visible head and side hits register on
+ ; the first overlapping tick.
  mov eax,[esi+S_X]
  add eax,HOSTILE_SHOT_WIDTH
  movzx edx,byte [player_x]
- add edx,PLAYER_DANGER_X
+ add edx,PLAYER_HITBOX_X
  cmp eax,edx
  jbe .next
  mov eax,[esi+S_X]
  movzx edx,byte [player_x]
- add edx,PLAYER_DANGER_X+PLAYER_DANGER_WIDTH
+ add edx,PLAYER_HITBOX_X+PLAYER_HITBOX_WIDTH
  cmp eax,edx
  jae .next
  mov eax,[esi+S_Y]
  add eax,HOSTILE_SHOT_HEIGHT
  movzx edx,byte [player_y]
- add edx,PLAYER_DANGER_Y
+ add edx,PLAYER_HITBOX_Y
  cmp eax,edx
  jbe .next
  mov eax,[esi+S_Y]
  movzx edx,byte [player_y]
- add edx,PLAYER_DANGER_Y+PLAYER_DANGER_HEIGHT
+ add edx,PLAYER_HITBOX_Y+PLAYER_HITBOX_HEIGHT
  cmp eax,edx
  jae .next
  mov dword [esi+S_ACTIVE],0
