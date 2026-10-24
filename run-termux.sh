@@ -29,11 +29,11 @@ if ! xdpyinfo -display "$DISPLAY" >/dev/null 2>&1; then
 fi
 
 am start -n com.termux.x11/.MainActivity >/dev/null 2>&1 || true
-# Native 8x8 glyphs preserve the document's spacing and fit this device's
-# 1080-pixel short edge. Software output avoids SDL2/OpenGL resize issues.
+# Scale the 1056x704 text raster to 75%, including the board and every sprite.
+# Nearest-neighbor output keeps the smaller 6x6-pixel text cells crisp.
 set -- $(xdpyinfo -display "$DISPLAY" | awk '/dimensions:/ {split($2, size, "x"); print size[1], size[2]; exit}')
-window_width=1056
-window_height=704
+window_width=792
+window_height=528
 window_left=$((($1 - window_width) / 2))
 window_top=$((($2 - window_height) / 2))
 if [ "$window_left" -lt 0 ]; then window_left=0; fi
@@ -42,7 +42,7 @@ config_file=$(mktemp)
 trap 'rm -f "$config_file"' EXIT
 cat > "$config_file" <<EOF
 [sdl]
-output=surface
+output=openglnb
 windowresolution=${window_width}x${window_height}
 windowposition=${window_left},${window_top}
 fullscreen=false
@@ -71,7 +71,7 @@ if command -v xdotool >/dev/null 2>&1; then
     while kill -0 "$emulator_pid" 2>/dev/null && [ "$attempts" -lt 30 ]; do
         window_id=$(xdotool search --pid "$emulator_pid" --name DOSBox 2>/dev/null | head -n 1 || true)
         if [ -n "$window_id" ] && xdotool getwindowgeometry --shell "$window_id" 2>/dev/null |
-            awk -F= '/^WIDTH=/ {w=$2} /^HEIGHT=/ {h=$2} END {exit !(w==1056 && h==704)}'; then
+            awk -F= '/^WIDTH=/ {w=$2} /^HEIGHT=/ {h=$2} END {exit !(w==792 && h==528)}'; then
             sleep 0.3
             xdotool windowunmap "$window_id" windowmap "$window_id" windowfocus "$window_id" || true
             break

@@ -1,6 +1,6 @@
 # Food Invaders
 
-A 16-bit NASM game for 386-compatible real-mode DOS. `main.asm` renders colored ASCII in a 132 by 88 SVGA text screen. Eight-pixel cells produce a 1056 by 704 gameplay field with a 3:2 ratio. The playable build uses all ten ASCII designs from the team document: the Chef, five food enemies, Ratatouille, two weapons, and the fireball pickup. The main menu previews all ten designs at their source cell dimensions.
+A 16-bit NASM game for 386-compatible real-mode DOS. `main.asm` renders colored ASCII in a 132 by 88 SVGA text screen. Its native 1056 by 704 raster is displayed at 792 by 528 (75% scale), so the board and all characters appear smaller while keeping their 3:2 proportions. The playable build uses all ten ASCII designs from the team document: the Chef, five food enemies, Ratatouille, two weapons, and the fireball pickup. The main menu previews all ten designs at their source cell dimensions before the same display scaling is applied.
 
 ## Gameplay reference
 
