@@ -479,16 +479,16 @@ tests_start:
  call show_main_menu
  check word [back_buffer+(MENU_TITLE_ROW*SCREEN_WIDTH+TEST_MENU_TITLE_X)*2],0A46h,'Food Invaders menu title'
  check word [back_buffer+(MENU_DIFFICULTY_ROW*SCREEN_WIDTH+TEST_MENU_DIFFICULTY_X)*2],0E44h,'menu explains selectable difficulty'
- check word [back_buffer+(MENU_ENEMY_ROW*SCREEN_WIDTH+10)*2],0D23h,'menu previews cupcake ASCII art'
- check word [back_buffer+(MENU_ENEMY_ROW*SCREEN_WIDTH+35)*2],0E23h,'menu previews fries ASCII art'
- check word [back_buffer+((MENU_ENEMY_ROW+(16-11)/2)*SCREEN_WIDTH+59)*2],0B23h,'menu previews burger ASCII art'
- check word [back_buffer+(MENU_ENEMY_ROW*SCREEN_WIDTH+87)*2],0C23h,'menu previews hotdog ASCII art'
- check word [back_buffer+(MENU_ENEMY_ROW*SCREEN_WIDTH+111)*2],0A23h,'menu previews pizza ASCII art'
- check word [back_buffer+(MENU_SHOWCASE_ROW*SCREEN_WIDTH+16)*2],0F23h,'menu previews Ratatouille ASCII art'
- check word [back_buffer+(MENU_SHOWCASE_ROW*SCREEN_WIDTH+44)*2],0B23h,'menu previews cleaver ASCII art'
- check word [back_buffer+(MENU_SHOWCASE_ROW*SCREEN_WIDTH+62)*2],0F23h,'menu previews Chef ASCII art'
- check word [back_buffer+(MENU_SHOWCASE_ROW*SCREEN_WIDTH+85)*2],0E23h,'menu previews rolling pin ASCII art'
- check word [back_buffer+((MENU_SHOWCASE_ROW-1)*SCREEN_WIDTH+109)*2],0E23h,'menu previews fireball ASCII art'
+ check word [back_buffer+(MENU_ENEMY_ROW*SCREEN_WIDTH+11)*2],0D23h,'menu previews cupcake ASCII art'
+ check word [back_buffer+(MENU_ENEMY_ROW*SCREEN_WIDTH+41)*2],0E23h,'menu previews fries ASCII art'
+ check word [back_buffer+((MENU_ENEMY_ROW+(16-11)/2)*SCREEN_WIDTH+70)*2],0B23h,'menu previews burger ASCII art'
+ check word [back_buffer+(MENU_ENEMY_ROW*SCREEN_WIDTH+103)*2],0C23h,'menu previews hotdog ASCII art'
+ check word [back_buffer+(MENU_ENEMY_ROW*SCREEN_WIDTH+132)*2],0A23h,'menu previews pizza ASCII art'
+ check word [back_buffer+(MENU_SHOWCASE_ROW*SCREEN_WIDTH+8)*2],0F23h,'menu previews Ratatouille ASCII art'
+ check word [back_buffer+(MENU_SHOWCASE_ROW*SCREEN_WIDTH+45)*2],0B23h,'menu previews cleaver ASCII art'
+ check word [back_buffer+(MENU_SHOWCASE_ROW*SCREEN_WIDTH+73)*2],0F23h,'menu previews Chef ASCII art'
+ check word [back_buffer+(MENU_SHOWCASE_ROW*SCREEN_WIDTH+106)*2],0E23h,'menu previews rolling pin ASCII art'
+ check word [back_buffer+((MENU_SHOWCASE_ROW-1)*SCREEN_WIDTH+138)*2],0E23h,'menu previews fireball ASCII art'
  mov ah,05h
  mov cx,0231h                 ; BIOS enqueue '1': Easy.
  int 16h
@@ -579,14 +579,14 @@ tests_start:
  check dx,0F23h,'document Ratatouille art renders at its randomized position'
  call show_game_over
  check word [back_buffer+(RESULT_TITLE_ROW*SCREEN_WIDTH+TEST_GAMEOVER_TITLE_X)*2],0C47h,'game over title is centered'
- check word [back_buffer+(RESULT_ART_ROW*SCREEN_WIDTH+36)*2],0F23h,'game over previews Ratatouille art'
- check word [back_buffer+(RESULT_ART_ROW*SCREEN_WIDTH+62)*2],0F23h,'game over previews Chef art'
- check word [back_buffer+((RESULT_ART_ROW-1)*SCREEN_WIDTH+89)*2],0E23h,'game over previews fireball art'
+ check word [back_buffer+(RESULT_ART_ROW*SCREEN_WIDTH+51)*2],0F23h,'game over previews Ratatouille art'
+ check word [back_buffer+(RESULT_ART_ROW*SCREEN_WIDTH+74)*2],0F23h,'game over previews Chef art'
+ check word [back_buffer+((RESULT_ART_ROW-1)*SCREEN_WIDTH+96)*2],0E23h,'game over previews fireball art'
  mov dword [score],1220
  call show_victory
  check word [back_buffer+(RESULT_TITLE_ROW*SCREEN_WIDTH+TEST_VICTORY_TITLE_X)*2],0A4Bh,'victory title is centered'
- check word [back_buffer+(RESULT_SCORE_VALUE_ROW*SCREEN_WIDTH+64)*2],0F31h,'victory score starts centered'
- check word [back_buffer+(RESULT_SCORE_VALUE_ROW*SCREEN_WIDTH+67)*2],0F30h,'victory score ends centered'
+ check word [back_buffer+(RESULT_SCORE_VALUE_ROW*SCREEN_WIDTH+76)*2],0F31h,'victory score starts centered'
+ check word [back_buffer+(RESULT_SCORE_VALUE_ROW*SCREEN_WIDTH+79)*2],0F30h,'victory score ends centered'
 %ifdef VISUAL_TEST
  ; Optional manual capture mode: the normal self-test has already completed
  ; the full campaign simulation and verified VICTORY before reaching here.
@@ -968,13 +968,13 @@ assert_invariants:
  add esi,S_SIZE
  loop .shot
  cmp byte [player_x],LEFT
- jl .bad
+ jb .bad
  cmp byte [player_x],RIGHT-PLAYER_WIDTH
- jg .bad
+ ja .bad
  cmp byte [player_lives],0
- jl .bad
+ jb .bad
  cmp byte [player_lives],3
- jg .bad
+ ja .bad
  inc dword [test_count]
  pop edi
  pop esi

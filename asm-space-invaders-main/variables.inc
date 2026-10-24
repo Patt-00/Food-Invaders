@@ -1,7 +1,7 @@
 ; Shared game data and constants.  This file is included once by main.asm.
 
-SCREEN_WIDTH    equ 132
-SCREEN_HEIGHT   equ 88
+SCREEN_WIDTH    equ 156
+SCREEN_HEIGHT   equ 104
 PLAYFIELD_TOP   equ 1        ; Row zero belongs to the HUD.
 PLAYER_WIDTH    equ 12
 PLAYER_HEIGHT   equ 16
@@ -22,14 +22,14 @@ PLAYER_HITBOX_WIDTH equ PLAYER_WIDTH
 PLAYER_HITBOX_HEIGHT equ PLAYER_HEIGHT
 
 ; VGA 32 KiB text memory and 8-bit coordinates bound this display mode.
-%if SCREEN_WIDTH != 132 || SCREEN_HEIGHT != 88
-    %error "Display timing is configured for 132x88 cells"
+%if SCREEN_WIDTH != 156 || SCREEN_HEIGHT != 104
+    %error "Display timing is configured for 156x104 cells"
 %endif
 %if SCREEN_WIDTH * SCREEN_HEIGHT * 2 > 32768
     %error "Text frame must fit in VGA text memory"
 %endif
 
-; Gameplay hitboxes match the exact document artwork dimensions.
+; Gameplay collision bounds match the original document artwork.
 %if PLAYER_WIDTH != SOURCE_ART_WIDTH || PLAYER_HEIGHT != SOURCE_ART_HEIGHT
     %error "Chef dimensions must match the source artwork"
 %endif
@@ -86,7 +86,7 @@ MENU_ENEMY_PREVIEW_WIDTH equ (SCREEN_WIDTH / MENU_ENEMY_PREVIEW_COUNT)
 ; Enemies roam the full field but stop above the Chef's safe area.
 ENEMY_CHEF_SAFE_GAP equ 8
 ENEMY_BREACH_LINE equ (SCREEN_HEIGHT - PLAYER_HEIGHT - 1 - ENEMY_CHEF_SAFE_GAP)
-ENEMY_CLEARANCE equ 2
+ENEMY_CLEARANCE equ 4
 ENEMY_RANDOM_POSITION_TRIES equ 64
 ENEMY_RANDOM_STEP_TRIES equ 12
 enemy_move_step_x_by_wave db 4,6,8,10

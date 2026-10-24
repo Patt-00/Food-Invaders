@@ -1,28 +1,28 @@
 ; Food Invaders menus. Existing public procedure/input interfaces retained.
 %include "assets/title_art.inc"
 %include "assets/gameover_art.inc"
-MENU_RULE_TOP_ROW equ 2
-MENU_TITLE_ROW equ 4
-MENU_SUBTITLE_ROW equ 7
-MENU_ENEMY_ROW equ 13
-MENU_ENEMY_LABEL_ROW equ 30
-MENU_SHOWCASE_ROW equ 34
-MENU_SHOWCASE_LABEL_ROW equ 52
-MENU_CONTROLS_ROW equ 56
-MENU_WEAPONS_ROW equ 59
-MENU_POWERUP_ROW equ 62
-MENU_DETAILS_ROW equ 65
-MENU_BOSS_ROW equ 68
-MENU_DIFFICULTY_ROW equ 72
-MENU_START_ROW equ 76
-MENU_QUIT_ROW equ 79
-MENU_RULE_BOTTOM_ROW equ 83
-RESULT_ART_ROW equ 21
-RESULT_ART_LABEL_ROW equ 40
-RESULT_TITLE_ROW equ 48
-RESULT_SCORE_LABEL_ROW equ 54
-RESULT_SCORE_VALUE_ROW equ 56
-RESULT_HINT_ROW equ 61
+MENU_RULE_TOP_ROW equ 10
+MENU_TITLE_ROW equ 12
+MENU_SUBTITLE_ROW equ 15
+MENU_ENEMY_ROW equ 21
+MENU_ENEMY_LABEL_ROW equ 38
+MENU_SHOWCASE_ROW equ 42
+MENU_SHOWCASE_LABEL_ROW equ 60
+MENU_CONTROLS_ROW equ 64
+MENU_WEAPONS_ROW equ 67
+MENU_POWERUP_ROW equ 70
+MENU_DETAILS_ROW equ 73
+MENU_BOSS_ROW equ 76
+MENU_DIFFICULTY_ROW equ 80
+MENU_START_ROW equ 84
+MENU_QUIT_ROW equ 87
+MENU_RULE_BOTTOM_ROW equ 91
+RESULT_ART_ROW equ 29
+RESULT_ART_LABEL_ROW equ 48
+RESULT_TITLE_ROW equ 56
+RESULT_SCORE_LABEL_ROW equ 62
+RESULT_SCORE_VALUE_ROW equ 64
+RESULT_HINT_ROW equ 69
 
 menu_rule_text db '================================================================================',0
 menu_subtitle_text db 'THE KITCHEN IS UNDER ATTACK',0
@@ -70,36 +70,36 @@ show_main_menu:
 
  mov bl,0Fh
  mov dh,MENU_ENEMY_LABEL_ROW
- mov dl,10
+ mov dl,12
  mov si,cupcake_label
  call print_string
- mov dl,37
+ mov dl,44
  mov si,fries_label
  call print_string
- mov dl,63
+ mov dl,74
  mov si,burger_label
  call print_string
- mov dl,89
+ mov dl,105
  mov si,hotdog_label
  call print_string
- mov dl,115
+ mov dl,137
  mov si,pizza_label
  call print_string
 
  mov dh,MENU_SHOWCASE_LABEL_ROW
- mov dl,18
+ mov dl,10
  mov si,boss_label
  call print_string
- mov dl,41
+ mov dl,43
  mov si,cleaver_label
  call print_string
- mov dl,64
+ mov dl,75
  mov si,chef_label
  call print_string
- mov dl,81
+ mov dl,103
  mov si,rolling_pin_label
  call print_string
- mov dl,106
+ mov dl,135
  mov si,fireball_label
  call print_string
 
@@ -180,35 +180,35 @@ draw_menu_preview:
  call draw_rectangle_art
 
  ; Boss, weapons, Chef and power-up preview below the enemy row.
- mov eax,16
+ mov eax,8
  mov edx,MENU_SHOWCASE_ROW
  mov esi,art_rat
  mov ecx,15
  mov ebp,16
  mov bl,0Fh
  call draw_rectangle_art
- mov eax,39
+ mov eax,40
  mov edx,MENU_SHOWCASE_ROW
  mov esi,cleaver_art
  mov ecx,WEAPON_WIDTH
  mov ebp,WEAPON_HEIGHT
  mov bl,0Bh
  call draw_rectangle_art
- mov eax,(SCREEN_WIDTH-PLAYER_WIDTH)/2
+ mov eax,71
  mov edx,MENU_SHOWCASE_ROW
  mov esi,player_art
  mov ecx,PLAYER_WIDTH
  mov ebp,PLAYER_HEIGHT
  mov bl,0Fh
  call draw_rectangle_art
- mov eax,81
+ mov eax,102
  mov edx,MENU_SHOWCASE_ROW
  mov esi,rolling_pin_art
  mov ecx,WEAPON_WIDTH
  mov ebp,WEAPON_HEIGHT
  mov bl,0Eh
  call draw_rectangle_art
- mov eax,103
+ mov eax,132
  mov edx,MENU_SHOWCASE_ROW-1
  mov esi,art_fireball
  mov ecx,PICKUP_WIDTH
@@ -293,21 +293,21 @@ show_victory:
 ; Result screens reuse the exact document ASCII art shown during gameplay.
 draw_result_preview:
  pushad
- mov eax,36
+ mov eax,51
  mov edx,RESULT_ART_ROW
  mov esi,art_rat
  mov ecx,15
  mov ebp,16
  mov bl,0Fh
  call draw_rectangle_art
- mov eax,60
+ mov eax,72
  mov edx,RESULT_ART_ROW
  mov esi,player_art
  mov ecx,PLAYER_WIDTH
  mov ebp,PLAYER_HEIGHT
  mov bl,0Fh
  call draw_rectangle_art
- mov eax,83
+ mov eax,90
  mov edx,RESULT_ART_ROW-1
  mov esi,art_fireball
  mov ecx,PICKUP_WIDTH
@@ -316,13 +316,13 @@ draw_result_preview:
  call draw_rectangle_art
  mov bl,0Fh
  mov dh,RESULT_ART_LABEL_ROW
- mov dl,38
+ mov dl,53
  mov si,boss_label
  call print_string
- mov dl,64
+ mov dl,76
  mov si,chef_label
  call print_string
- mov dl,86
+ mov dl,93
  mov si,fireball_label
  call print_string
  popad

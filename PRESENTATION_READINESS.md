@@ -13,12 +13,12 @@ The intended users are the CS 003 project group and classmates who can play the 
 | Area | Current implementation |
 |---|---|
 | Language and format | NASM Assembly, 16-bit real-mode DOS `.COM`; 386 instructions support DWORD game calculations. |
-| Runtime | DOSBox-X with `machine=svga_s3`; the game configures a 132 by 88 character display. |
+| Runtime | DOSBox-X with `machine=svga_s3`; the game configures a 156 by 104 character display. |
 | Display | The game draws colored ASCII cells into a memory back buffer, then copies the frame to text memory at `B800h`. `INT 10h` initializes video mode and text services. |
 | Input | `INT 16h` checks the keyboard buffer. `main.asm` accepts only assigned keys and ignores other keys while play continues. |
 | State | `variables.inc` defines shared screen, player, enemy, weapon, difficulty, stage, and power-up state. |
 | Gameplay modules | `modules/player.asm`, `bullet.asm`, `enemy.asm`, `collision.asm`, `encounter.asm`, and `features.asm` update the simulation. |
-| Rendering and screens | `modules/display.asm` draws the HUD and 132 by 88 game field. `modules/menu.asm` draws the title, ASCII preview, game-over, and victory screens. DOSBox-X launches full-screen and the runtime assets use the document's exact ASCII designs. |
+| Rendering and screens | `modules/display.asm` draws the HUD and 156 by 104 game field. `modules/menu.asm` draws the title, original ASCII preview, game-over, and victory screens. DOSBox-X launches full-screen. |
 | External services | None. The game does not use authentication, a server, a database, or a network connection. |
 
 Each game iteration polls input, updates state and timers, resolves collisions and stage events, draws the ASCII frame, and waits about 50 milliseconds before the next iteration. The five-stage campaign clears four food-enemy stages before presenting the 20-HP Ratatouille boss.
@@ -59,7 +59,7 @@ The current host ran DOSBox-X 2026.10.01 with a 386 CPU and SVGA S3 mode. The Po
 
 | Step | Expected result |
 |---|---|
-| Launch | DOSBox-X opens full-screen with the exact ASCII roster and instructions. The field keeps a 3:2 aspect ratio. |
+| Launch | DOSBox-X opens full-screen with the original ASCII roster and instructions. The launcher preserves the 3:2 field ratio. |
 | Start | The selected difficulty sets the starting lives and enemy timing. |
 | Move and fire | The Chef moves within the field. Space fires a cleaver; `X` fires a rolling pin. |
 | Defeat enemies | Score increases, enemies move and fire on separate timers, and a fireball may fall. |
@@ -85,10 +85,10 @@ These roles are proposals based on the existing task table. Members should speak
 
 | Risk | Effect | Response |
 |---|---|---|
-| DOSBox-X or SVGA S3 mode fails on the presentation computer | The game may not open its 132 by 88 screen. | Rebuild and launch on that computer before presenting. Bring the source, NASM build instructions, and current test logs on offline storage. |
+| DOSBox-X or SVGA S3 mode fails on the presentation computer | The game may not open its 156 by 104 screen. | Rebuild and launch on that computer before presenting. Bring the source, NASM build instructions, and current test logs on offline storage. |
 | A power-up does not drop during a short demonstration | The group cannot show a temporary boost live. | Explain the one-in-four drop rule and show the passing player-suite result. Identify it as automated evidence rather than live gameplay. |
 | The full campaign takes longer than the presentation slot | The audience may not see the final boss and victory in time. | Rehearse a timed run. If there is no time for a complete campaign, show the core live controls and label the five-stage campaign output as automated test evidence. |
-| The presentation computer may use a different display from the tested 1920 by 1080 desktop | The board may scale or frame differently on the target machine. | Run the full-screen 132 by 88 game there. Check the 3:2 board, exact document art, random movement and firing, and head-hit timing. |
+| The presentation computer may use a different display from the tested 1920 by 1080 desktop | The board may scale or frame differently on the target machine. | Run the full-screen 156 by 104 game there. Check the 3:2 field, original ASCII art, random movement and firing, and head-hit timing. |
 | The course report does not match the current build | Duplicate Chapter 5 tabs show different old test counts and an older screen size. The output-flow explanation also needs to match the current B800h renderer. | Update the course document's resolution, current assertion count, screenshots, Appendix C, Appendix D, and library reference after the group approves those edits. Confirm and cite any original-game or source-code references. The current audit has not edited that Google Doc. |
 | Speaker roles or contributions are inaccurate | A member may be unable to explain the assigned work. | Each member confirms their completed work and speaking section. Do not present the documentation assignment table as proof of code authorship. |
 
@@ -96,4 +96,4 @@ If DOSBox-X cannot launch during the presentation, show the repository's source 
 
 ## Readiness status
 
-The current code passes the automated DOSBox-X suites on normal and dynamic CPU cores, with 43,538 core assertions per run. The test configuration used surface output with a 3:2 aspect setting. The rebuilt game also launched full-screen on the current 1920 by 1080 display. A live capture shows the complete gameplay artwork in the 3:2 field. Xvfb still produces a blank full-screen capture, so that virtual-display result does not represent the current display check. The runtime uses the exact document Chef, enemy, weapon, and fireball ASCII arrays. The collision tests verify source-size hitboxes, but a human play check is still useful. `WINTEST.COM` reports the victory result after its automated campaign simulation; this is not a human playthrough. LibreOffice 26.2.6.3 imported the revised ten-slide deck and rendered a ten-page PDF. I inspected the updated verification slide in that render. The group has not rehearsed the full campaign, confirmed speaking assignments, or updated the course Google Doc. The ten-slide editable deck is [available here](presentation/Food-Invaders-Final-Presentation-v2.pptx). The group still needs to open and approve it in the target PowerPoint or Google Slides application.
+The current code passes the automated DOSBox-X suites on normal and dynamic CPU cores, with 43,538 core assertions per run. The test configuration used surface output with a 3:2 aspect setting. The full-size original ASCII build launched full-screen on the current 1920 by 1080 display, and a live menu capture shows the original art without clipping. The 156 by 104 field contains about 40% more cells than the 132 by 88 field. Enemies keep four cells of clearance. A human-length campaign has not been played. `WINTEST.COM` verifies victory after its automated campaign simulation. LibreOffice 26.2.6.3 imported the revised ten-slide deck and rendered a ten-page PDF. I inspected the updated verification slide in that render. The group has not rehearsed the full campaign, confirmed speaking assignments, or updated the course Google Doc. The ten-slide editable deck is [available here](presentation/Food-Invaders-Final-Presentation-v2.pptx). The group still needs to open and approve the deck in the target PowerPoint or Google Slides application.

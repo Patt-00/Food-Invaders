@@ -2,7 +2,7 @@
 %include "assets/bullet_art.inc"
 %include "assets/feature_art.inc"
 
-; Text-mode renderer: one 132x88 back buffer, copied to B800h once per frame.
+; Text-mode renderer: one 156x104 back buffer, copied to B800h once per frame.
 ; Movement/collision/drawing share type widths/heights. No Windows pixels.
 ; All routines preserve full general-purpose registers unless noted.
 buffer_guard_before dd 0A5C33C5Ah
@@ -54,18 +54,18 @@ initialize_display:
     jne .unsupported
     mov ax, 40h
     mov es, ax
-    cmp word [es:4Ah], SCREEN_WIDTH
+    cmp word [es:4Ah], 132
     jne .unsupported
 
-    ; Unlock the VGA timing registers before extending the vertical raster.
-    mov dx, 03D4h
+    ; Use the active CRTC port and unlock its timing registers.
+    mov dx, [es:63h]
     mov al, 11h
     out dx, al
     inc dx
     in al, dx
     and al, 7Fh
     out dx, al
-    mov dx, 03D4h
+    mov dx, [es:63h]
     mov si, tall_display_timing
     mov cx, (tall_display_timing_end - tall_display_timing) / 2
     cld
@@ -73,8 +73,9 @@ initialize_display:
     lodsw                    ; AL=CRTC register, AH=value; OUT writes both ports.
     out dx, ax
     loop .timing
+    mov word [es:4Ah], SCREEN_WIDTH
     mov byte [es:84h], SCREEN_HEIGHT - 1
-    mov word [es:4Ch], 8000h  ; One complete frame uses almost 32 KiB.
+    mov word [es:4Ch], 8000h  ; Reserve one 32 KiB text page.
     mov ah, 01h
     mov cx, 2000h
     int 10h                  ; Hide the text cursor.
@@ -98,18 +99,25 @@ initialize_display:
     pop ax
     ret
 
-; 704 visible scanlines = 88 rows * 8 pixels. 760 total scanlines
-; leave room for blanking/retrace. Overflow bits encode scanlines 8 and 9.
+; 832 visible scanlines = 104 rows * 8 pixels. 888 total scanlines
+; leave room for blanking/retrace. The 156x104 field keeps a 3:2 ratio.
 ; Max-scanline retains eight-pixel glyphs and disables double scanning.
 tall_display_timing:
-    dw 0F606h                ; Vertical total = 760 (register stores total-2).
-    dw 0F007h                ; Overflow bits; line compare stays below the raster limit.
+    dw 0B300h                ; Horizontal total = 184 character clocks.
+    dw 09B01h                ; Last visible horizontal character = 155.
+    dw 09C02h                ; Horizontal blank starts at character 156.
+    dw 09603h                ; Horizontal blank ends after 26 clocks.
+    dw 0A104h                ; Horizontal retrace starts at character 161.
+    dw 01505h                ; Horizontal retrace remains 20 clocks wide.
+    dw 04E13h                ; Text memory stride is 78 words per row.
+    dw 07606h                ; Vertical total = 888 (register stores total-2).
+    dw 0FF07h                ; Overflow bits for the 832-line display.
     dw 06709h                ; Eight glyph scanlines; blank/line-compare overflow.
-    dw 0BF12h                ; Last visible scanline = 703 (02BFh).
-    dw 0D010h                ; Vertical retrace starts at scanline 720.
-    dw 02411h                ; Retrace ends at 724; timing registers unlocked.
-    dw 0C015h                ; Vertical blank starts at scanline 704.
-    dw 0F716h                ; Vertical blank ends at the final raster line, 759.
+    dw 03F12h                ; Last visible scanline = 831 (033Fh).
+    dw 05010h                ; Vertical retrace starts at scanline 848.
+    dw 02411h                ; Retrace ends at 852; timing registers unlocked.
+    dw 04015h                ; Vertical blank starts at scanline 832.
+    dw 07716h                ; Vertical blank ends at the final raster line, 887.
     dw 0FF18h                ; Line compare = 1023, avoiding a split screen.
 tall_display_timing_end:
 
@@ -336,9 +344,9 @@ draw_sprite:
 
 ; -------------------------------------------------
 ; Procedure: draw_weapon_sprite
-; Purpose: Draw the exact 12x16 weapon artwork.
+; Purpose: Draw the original 12x16 weapon art.
 ; Input: DS:SI=source art, DH=row, DL=column, BL=color.
-; Output: Every source character is rendered at the player's position.
+; Output: Every original ASCII cell is rendered at the player's position.
 ; Modifies: Flags only; all general-purpose registers preserved.
 ; Shared: render_buffer. Chef and enemies use the same rectangle renderer.
 ; -------------------------------------------------

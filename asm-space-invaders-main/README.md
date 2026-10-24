@@ -1,6 +1,6 @@
 # Food Invaders
 
-A 16-bit NASM game for 386-compatible real-mode DOS. `main.asm` renders the exact colored ASCII designs from the project document in a 132 by 88 SVGA text screen. DOSBox-X launches the board full-screen and preserves its 3:2 proportions. The Chef and weapons use 12 by 16 cells, food enemies use their documented 14 to 22 by 11 to 16 cells, Ratatouille uses 15 by 16 cells, and the fireball uses 14 by 18 cells. The menu and result screens use the same artwork as gameplay.
+A 16-bit NASM game for 386-compatible real-mode DOS. `main.asm` renders the original colored ASCII designs from the project document in a 156 by 104 SVGA text field. DOSBox-X launches the game full-screen with a 3:2 aspect ratio. The field has about 40% more character cells than the 132 by 88 version, and keeps the original art dimensions: Chef and weapons are 12 by 16 cells, food enemies are 14 to 22 by 11 to 16 cells, Ratatouille is 15 by 16 cells, and the fireball is 14 by 18 cells.
 
 ## Gameplay reference
 
@@ -16,7 +16,7 @@ nasm -f bin main.asm -o INVADERS.COM
 
 `build.bat` provides the same basic build on Windows. `build.ps1 -Test -Core normal` assembles the game and three regression suites, then runs them in DOSBox-X. Repeat with `-Core dynamic` to test the other supported CPU core. All COM files must stay below 60,000 bytes to leave room for the DOS stack.
 
-Run with **DOSBox-X** and the `machine=svga_s3` setting. The program sets custom vertical timing for 88 rows of 8 scanlines. `dosbox.conf` supplies the emulator settings and starts `INVADERS.COM` when DOSBox-X starts from this directory. On Windows, use `run-dosbox.ps1 -DosBoxPath <path-to-dosbox-x>`. On Termux, use `../run-termux.sh` with Termux X11.
+Run with **DOSBox-X** and the `machine=svga_s3` setting. The program sets custom horizontal and vertical timing for 156 columns and 104 rows of 8 scanlines. `dosbox.conf` supplies the emulator settings and starts `INVADERS.COM` when DOSBox-X starts from this directory. On Windows, use `run-dosbox.ps1 -DosBoxPath <path-to-dosbox-x>`. On Termux, use `../run-termux.sh` with Termux X11.
 
 ## Controls and behavior
 
@@ -35,17 +35,17 @@ Run with **DOSBox-X** and the `machine=svga_s3` setting. The program sets custom
 
 The menu offers Easy, Normal, and Hard. Easy starts with five lives and lengthens enemy movement and firing delays by 50 percent. Normal starts with three lives and uses the stage delays. Hard starts with two lives and shortens both enemy delays by 25 percent.
 
-The Chef fires the document's 12 by 16 cleaver with Space and 12 by 16 rolling pin with X. Three player shots can be active at once, and the weapons share a cooldown. Cleavers fire every 16 game ticks, or 0.8 seconds. Rolling pins fire every 28 ticks, or 1.4 seconds. Both travel two rows per update.
+The Chef fires the 12 by 16 document cleaver with Space and the 12 by 16 rolling pin with X. Three player shots can be active at once, and the weapons share a cooldown. Cleavers fire every 16 game ticks, or 0.8 seconds. Rolling pins fire every 28 ticks, or 1.4 seconds. Both travel two rows per update.
 
-Each enemy defeat has a one-in-four chance to drop the document's 14 by 18 fireball when no pickup is already falling. It falls one row every 50 milliseconds. Catching a green fireball increases movement speed. Catching a red fireball adds one damage per shot. Catching a yellow fireball shortens cooldowns and adds a second cleaver to each shot. Each effect lasts 80 game ticks. Distinct effects can overlap, and another pickup refreshes the timer. `activate_player_powerup` remains available to modules that need to activate all three effects together.
+Each enemy defeat has a one-in-four chance to drop the 14 by 18 document fireball when no pickup is already falling. It falls one row every 50 milliseconds. Catching a green fireball increases movement speed. Catching a red fireball adds one damage per shot. Catching a yellow fireball shortens cooldowns and adds a second cleaver to each shot. Each effect lasts 80 game ticks. Distinct effects can overlap, and another pickup refreshes the timer. `activate_player_powerup` remains available to modules that need to activate all three effects together.
 
-The four named waves are Patrol, Flankers, Crossfire, and Last Stand. Enemies spawn at random positions across the playfield. Each enemy chooses a new signed X and Y step independently when its movement timer expires. The steps are collision checked, keep a two-cell clearance between enemies, and stop above a safe line eight rows above the Chef. Every enemy has an independent randomized firing timer. Later waves shorten the movement and firing intervals, and the fifth wave starts Ratatouille at a random position.
+The four named waves are Patrol, Flankers, Crossfire, and Last Stand. Enemies spawn at random positions across the playfield. Each enemy chooses a new signed X and Y step independently when its movement timer expires. The steps are collision checked, keep a four-cell clearance between enemies, and stop above a safe line eight rows above the Chef. Every enemy has an independent randomized firing timer. Later waves shorten the movement and firing intervals, and the fifth wave starts Ratatouille at a random position.
 
 Enemies move and fire on independent random timers. At Normal difficulty, movement delays are configured from 120 to 360 milliseconds in Patrol and from 60 to 240 milliseconds in Last Stand. Random step ranges grow each wave: Patrol uses up to four columns and two rows per axis; Last Stand uses up to ten columns and five rows. Each monster's firing delay falls from 2.6 to 5 seconds in Patrol to 1.55 to 2.9 seconds in Last Stand. Easy and Hard scale movement and firing delays. The 50 ms game tick quantizes the timers.
 
 Hostile-shot markers occupy one text cell and move faster each wave. Their configured delay falls from 80 milliseconds in Patrol to 35 milliseconds in Last Stand. The 50 ms game tick limits the fastest movement to one row per tick. The 20-HP Ratatouille boss appears on stage five and fires every 1 to 2 seconds. Defeating it produces victory. Game-over and victory screens preview the exact Chef, Ratatouille, and fireball designs from the document, then show the score and restart or quit controls. Contact, hostile fire, and safe-line breaches aggregate to at most one life loss per tick. The Chef receives one second of invulnerability. Life loss takes priority over a simultaneous stage clear.
 
-Hostile shots use visible 1×1 red markers and collide with the Chef's full 12 by 16 bounds. The first overlap with the head, body, or side registers a hit.
+Hostile shots use visible 1×1 red markers and collide with the Chef's 12 by 16 bounds. The first overlap with the head, body, or side registers a hit.
 
 ## Architecture and interfaces
 
@@ -66,7 +66,7 @@ Hostile shots use visible 1×1 red markers and collide with the Chef's full 12 b
 
 Enemy APIs use DWORD arguments with real-mode WORD return addresses: callers normalize ESP, push arguments right-to-left and remove them after the call. `get_enemy_bounds(index)` returns a slot pointer in EAX and metadata in EDX. `apply_enemy_damage(index, damage)` returns a new-death flag in EAX and a one-time reward in EDX; collision adds that reward to the DWORD score. Enemy APIs preserve EBX/ESI/EDI/EBP. DS/ES address the shared COM segment. Legacy `enemy_*` names alias DWORD fields in slot zero; legacy `bullet_*` names alias byte player-projectile slot zero.
 
-Keep gameplay free of rendering interrupts, use one shared definition for each variable, preserve documented register contracts, and rebuild after integration changes. Collision bounds match the exact source artwork dimensions used by the renderer.
+Keep gameplay free of rendering interrupts, use one shared definition for each variable, preserve documented register contracts, and rebuild after integration changes. Collision bounds match the original artwork dimensions used by the renderer.
 
 ## Tests
 
