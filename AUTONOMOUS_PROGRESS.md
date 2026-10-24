@@ -13,7 +13,7 @@
 | Repository | `https://github.com/Patt-00/Food-Invaders` |
 | Working branch | `main` |
 | Published source | The half-scale character rendering and fullscreen launch preset are included in the current main-branch update. |
-| Source branch synchronization | NASM and DOSBox-X normal/dynamic checks pass; verify remote main after the current commit. |
+| Source branch synchronization | NASM and DOSBox-X normal/dynamic checks pass; GitHub `main` was read back after the fullscreen scaling update. |
 | Goal status | Complete for the code/game scope. Broader course deliverables remain outside this goal. |
 
 The broader project estimate uses the weighted rubric in `COMPLETION_AUDIT.md`. It includes group, course-document, and presentation requirements that the current code/game goal excludes. The Xvfb captures used a virtual X11 display, not a physical presentation computer, and a human-length campaign was not played.
