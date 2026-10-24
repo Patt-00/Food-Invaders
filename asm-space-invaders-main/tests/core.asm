@@ -1,7 +1,7 @@
 section .data
-%include "tests/compact_art_reference.inc"
-test_enemy_art_pointers dd test_cupcake_art,test_fries_art,test_burger_art
-                       dd test_hotdog_art,test_pizza_art,test_rat_art
+%include "assets/source_art.inc"
+source_enemy_art_pointers dd source_cupcake_art,source_fries_art,source_burger_art
+                         dd source_hotdog_art,source_pizza_art,source_rat_art
 test_art_width dd 0
 test_art_type dd 0
 test_spawn_min_y dd 0
@@ -125,6 +125,7 @@ tests_start:
  check dword [enemy_fire_timers],0,'new stage clears first firing timer'
  check dword [enemy_fire_timers+(MAX_ENEMIES-1)*4],0,'new stage clears last firing timer'
  call solo
+ mov dword [random_state],1
  ; Isolate the randomized per-enemy timer with a deterministic fixture.
  ; Five 50 ms ticks must not move; the sixth expires the 300 ms interval.
  mov dword [enemies+E_X],10
@@ -378,11 +379,11 @@ tests_start:
  check dword [attack_min_interval],1000,'boss fires faster than the final regular wave'
  check dword [enemy_move_min_interval],50,'boss movement is the fastest stage profile'
  check dword [enemy_shot_step_ms],35,'boss shots use the fastest hostile-shot profile'
- mov dword [enemies+E_X],RIGHT-8
+ mov dword [enemies+E_X],RIGHT-15
  mov dword [enemies+E_Y],TOP
  call fire_enemy
- check dword [shots+S_X],RIGHT-4,'boss shot centered'
- check dword [shots+S_Y],TOP+ENEMY_HEIGHT,'boss shot below compact art'
+ check dword [shots+S_X],RIGHT-8,'boss shot centered'
+ check dword [shots+S_Y],TOP+ENEMY_HEIGHT,'boss shot below source-size art'
  push dword 20
  push dword 0
  call apply_enemy_damage
@@ -478,16 +479,16 @@ tests_start:
  call show_main_menu
  check word [back_buffer+(MENU_TITLE_ROW*SCREEN_WIDTH+TEST_MENU_TITLE_X)*2],0A46h,'Food Invaders menu title'
  check word [back_buffer+(MENU_DIFFICULTY_ROW*SCREEN_WIDTH+TEST_MENU_DIFFICULTY_X)*2],0E44h,'menu explains selectable difficulty'
- check word [back_buffer+(MENU_ENEMY_ROW*SCREEN_WIDTH+11)*2],0D2Eh,'menu previews compact cupcake detail'
- check word [back_buffer+(MENU_ENEMY_ROW*SCREEN_WIDTH+37)*2],0E23h,'menu previews compact fries art'
- check word [back_buffer+((MENU_ENEMY_ROW+1)*SCREEN_WIDTH+62)*2],0B2Eh,'menu previews burger top detail'
- check word [back_buffer+(MENU_ENEMY_ROW*SCREEN_WIDTH+88)*2],0C2Eh,'menu previews hotdog top detail'
- check word [back_buffer+(MENU_ENEMY_ROW*SCREEN_WIDTH+117)*2],0A2Fh,'menu previews pizza edge detail'
+ check word [back_buffer+(MENU_ENEMY_ROW*SCREEN_WIDTH+10)*2],0D23h,'menu previews cupcake ASCII art'
+ check word [back_buffer+(MENU_ENEMY_ROW*SCREEN_WIDTH+35)*2],0E23h,'menu previews fries ASCII art'
+ check word [back_buffer+((MENU_ENEMY_ROW+(16-11)/2)*SCREEN_WIDTH+59)*2],0B23h,'menu previews burger ASCII art'
+ check word [back_buffer+(MENU_ENEMY_ROW*SCREEN_WIDTH+87)*2],0C23h,'menu previews hotdog ASCII art'
+ check word [back_buffer+(MENU_ENEMY_ROW*SCREEN_WIDTH+111)*2],0A23h,'menu previews pizza ASCII art'
  check word [back_buffer+(MENU_SHOWCASE_ROW*SCREEN_WIDTH+16)*2],0F23h,'menu previews Ratatouille ASCII art'
- check word [back_buffer+(MENU_SHOWCASE_ROW*SCREEN_WIDTH+41)*2],0B23h,'menu previews compact cleaver blade'
- check word [back_buffer+(MENU_SHOWCASE_ROW*SCREEN_WIDTH+64)*2],0F2Eh,'menu previews Chef hat detail'
- check word [back_buffer+(MENU_SHOWCASE_ROW*SCREEN_WIDTH+81)*2],0E23h,'menu previews compact rolling pin'
- check word [back_buffer+((MENU_SHOWCASE_ROW-1)*SCREEN_WIDTH+106)*2],0E5Eh,'menu previews fireball flame detail'
+ check word [back_buffer+(MENU_SHOWCASE_ROW*SCREEN_WIDTH+44)*2],0B23h,'menu previews cleaver ASCII art'
+ check word [back_buffer+(MENU_SHOWCASE_ROW*SCREEN_WIDTH+62)*2],0F23h,'menu previews Chef ASCII art'
+ check word [back_buffer+(MENU_SHOWCASE_ROW*SCREEN_WIDTH+85)*2],0E23h,'menu previews rolling pin ASCII art'
+ check word [back_buffer+((MENU_SHOWCASE_ROW-1)*SCREEN_WIDTH+109)*2],0E23h,'menu previews fireball ASCII art'
  mov ah,05h
  mov cx,0231h                 ; BIOS enqueue '1': Easy.
  int 16h
@@ -525,21 +526,21 @@ tests_start:
  mov dword [enemies+E_SX],0
  mov dword [enemies+E_SY],5
  call draw_game
- check word [back_buffer+(5*SCREEN_WIDTH+3)*2],0D2Eh,'compact cupcake detail drawn at an arbitrary position'
- check word [back_buffer+(TEST_PLAYER_Y*SCREEN_WIDTH+TEST_PLAYER_X+2)*2],0F2Dh,'chef drawn in player area'
+ check word [back_buffer+(5*SCREEN_WIDTH+7)*2],0D23h,'exact cupcake art drawn at an arbitrary position'
+ check word [back_buffer+(TEST_PLAYER_Y*SCREEN_WIDTH+TEST_PLAYER_X+2)*2],0F23h,'chef drawn in player area'
  push es
  mov ax,0B800h
  mov es,ax
- mov ax,[es:(5*SCREEN_WIDTH+3)*2]
+ mov ax,[es:(5*SCREEN_WIDTH+7)*2]
  pop es
- check ax,0D2Eh,'VGA memory contains rendered compact artwork'
+ check ax,0D23h,'VGA memory contains rendered cupcake artwork'
  mov byte [pickup_active],1
  mov byte [pickup_kind],POWERUP_SPEED
  mov byte [pickup_x],40
  mov byte [pickup_y],50
  call clear_screen
  call draw_pickup
- mov esi,test_fireball_art
+ mov esi,source_fireball_art
  mov edi,back_buffer+(50*SCREEN_WIDTH+40)*2
  mov ecx,PICKUP_WIDTH
  mov ebp,PICKUP_HEIGHT
@@ -575,12 +576,12 @@ tests_start:
  add eax,[enemies+E_X]
  shl eax,1
  mov dx,[back_buffer+eax]
- check dx,0F23h,'compact Ratatouille art renders at its randomized position'
+ check dx,0F23h,'document Ratatouille art renders at its randomized position'
  call show_game_over
  check word [back_buffer+(RESULT_TITLE_ROW*SCREEN_WIDTH+TEST_GAMEOVER_TITLE_X)*2],0C47h,'game over title is centered'
  check word [back_buffer+(RESULT_ART_ROW*SCREEN_WIDTH+36)*2],0F23h,'game over previews Ratatouille art'
- check word [back_buffer+(RESULT_ART_ROW*SCREEN_WIDTH+62)*2],0F2Dh,'game over previews Chef art'
- check word [back_buffer+((RESULT_ART_ROW-1)*SCREEN_WIDTH+86)*2],0E5Eh,'game over previews fireball art'
+ check word [back_buffer+(RESULT_ART_ROW*SCREEN_WIDTH+62)*2],0F23h,'game over previews Chef art'
+ check word [back_buffer+((RESULT_ART_ROW-1)*SCREEN_WIDTH+89)*2],0E23h,'game over previews fireball art'
  mov dword [score],1220
  call show_victory
  check word [back_buffer+(RESULT_TITLE_ROW*SCREEN_WIDTH+TEST_VICTORY_TITLE_X)*2],0A4Bh,'victory title is centered'
@@ -686,7 +687,7 @@ verify_enemy_art_collection:
  imul eax,T_SIZE
  mov ecx,[type_table+eax+T_W]
  mov ebp,[type_table+eax+T_H]
- mov esi,[test_enemy_art_pointers+ebx*4]
+ mov esi,[source_enemy_art_pointers+ebx*4]
  mov bl,[type_table+eax+T_COLOR]
  mov edi,back_buffer+(20*SCREEN_WIDTH+10)*2
  call verify_art_rows
@@ -995,7 +996,7 @@ test_failed:
  mov ax,4C01h
  int 21h
 
-; Compare a compact ASCII sprite from DS:ESI with rendered words at ES:EDI.
+; Compare a source ASCII sprite from DS:ESI with rendered words at ES:EDI.
 ; ECX/EBP are the rendered width and height; BL is the expected color.
 verify_art_rows:
  pushad

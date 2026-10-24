@@ -11,7 +11,7 @@ jmp start
 %include "modules/features.asm"
 %include "modules/collision.asm"
 %include "modules/display.asm"
-%include "tests/compact_art_reference.inc"
+%include "assets/source_art.inc"
 
 %macro expect 3
     cmp byte [%1], %2
@@ -115,7 +115,7 @@ start:
     call fire_bullet
     expect bullet_active, 1, 'primary allocates first slot'
     expect bullet_x, (SCREEN_WIDTH - WEAPON_WIDTH) / 2, 'cleaver art centered relative to chef'
-    expect bullet_y, SCREEN_HEIGHT - PLAYER_HEIGHT - WEAPON_HEIGHT - 1, 'weapon starts above the Chef'
+    expect bullet_y, SCREEN_HEIGHT - PLAYER_HEIGHT - WEAPON_HEIGHT - 1, 'full-size weapon starts above chef'
     expect bullets_kind, CLEAVER, 'primary weapon kind'
     expect bullets_damage, 1, 'normal cleaver damage'
     expect fire_cooldown, NORMAL_COOLDOWN, 'normal firing cooldown'
@@ -134,8 +134,8 @@ start:
     expect bullets_kind + 1, ROLLING_PIN, 'secondary kind'
     expect bullets_damage + 1, 2, 'secondary damage'
     expect fire_cooldown, SECONDARY_COOLDOWN, 'stronger weapon fires more slowly'
-    expect bullets_x + 1, (PLAYER_WIDTH - WEAPON_WIDTH) / 2, 'compact rolling pin fits at left edge'
-    expect bullet_x, (SCREEN_WIDTH - WEAPON_WIDTH) / 2, 'existing shot not overwritten'
+    expect bullets_x + 1, (PLAYER_WIDTH - WEAPON_WIDTH) / 2, 'full-size rolling pin fits at left edge'
+    expect bullet_x, (SCREEN_WIDTH - WEAPON_WIDTH) / 2, 'existing full-size shot not overwritten'
     mov byte [fire_cooldown], 0
     call fire_bullet
     expect bullets_active + 2, 1, 'third slot allocated'
@@ -153,7 +153,7 @@ start:
     expect bullets_kind, CLEAVER, 'invalid removal cannot touch adjacent memory'
     mov byte [player_x], SCREEN_WIDTH - PLAYER_WIDTH
     call fire_secondary
-    expect bullets_x + 1, SCREEN_WIDTH - PLAYER_WIDTH + (PLAYER_WIDTH - WEAPON_WIDTH) / 2, 'compact weapon stays centered on chef at right edge'
+    expect bullets_x + 1, SCREEN_WIDTH - PLAYER_WIDTH + (PLAYER_WIDTH - WEAPON_WIDTH) / 2, 'full-size weapon stays centered on chef at right edge'
     call initialize_bullets
     expect bullet_active, 0, 'restart clears first slot'
     expect bullets_active + 1, 0, 'restart clears second slot'
@@ -326,8 +326,8 @@ start:
     mov esi, enemies
     call maybe_drop_powerup
     expect pickup_active, 1, 'random enemy drop creates a pickup'
-    expect pickup_x, 20, 'compact fireball centers under the defeated enemy'
-    expect pickup_y, 36, 'falling fireball begins below the scaled burger'
+    expect pickup_x, 20, 'full-size fireball centers under the defeated enemy'
+    expect pickup_y, 41, 'falling fireball begins below the full-size enemy'
     mov byte [pickup_kind], POWERUP_DAMAGE
     mov dword [random_state], 1
     call maybe_drop_powerup
@@ -444,12 +444,11 @@ start:
     call check_bullet_enemy
     expect_word score, 10, 'dead enemy cannot award score twice'
 
-    ; The compact cleaver moves upward and reaches the target after three updates.
+    ; A full-size cleaver moves upward and reaches the target after three updates.
     call initialize_player
     call initialize_bullets
     mov byte [game_state], PLAYING
     mov byte [enemy_x], (SCREEN_WIDTH - ENEMY_WIDTH) / 2
-    mov byte [enemy_y], 12
     mov byte [enemy_health], INITIAL_ENEMY_HEALTH
     mov dword [enemy_alive], 1
     mov dword [alive_count], 1
@@ -461,14 +460,14 @@ start:
     call check_bullet_enemy
     expect enemy_health, INITIAL_ENEMY_HEALTH, 'distant shot has not hit yet'
     call update_bullets
-    expect bullet_y, 22, 'first projectile step moves two rows'
+    expect bullet_y, 22, 'first full-size projectile step moves two rows'
     expect enemy_health, INITIAL_ENEMY_HEALTH, 'projectile remains short of the target'
     call update_bullets
-    expect bullet_y, 20, 'second projectile step moves two rows'
-    expect enemy_health, INITIAL_ENEMY_HEALTH, 'second step is still below the target'
+    expect bullet_y, 20, 'second full-size projectile step moves two rows'
+    expect enemy_health, INITIAL_ENEMY_HEALTH, 'second full-size step is still below the target'
     call update_bullets
-    expect bullet_y, 18, 'third projectile step moves two rows'
-    expect enemy_health, INITIAL_ENEMY_HEALTH - 1, 'compact cleaver hits for one damage'
+    expect bullet_y, 18, 'third full-size projectile step moves two rows'
+    expect enemy_health, INITIAL_ENEMY_HEALTH - 1, 'full-size cleaver hits for one damage'
     expect bullet_active, 0, 'fast hit consumes its projectile'
     expect fire_cooldown, NORMAL_COOLDOWN - 3, 'speed does not accelerate cooldown ticking'
     expect_word score, 0, 'fast shot does not award premature score'
@@ -487,7 +486,6 @@ start:
     call initialize_bullets
     mov byte [game_state], PLAYING
     mov byte [enemy_x], (SCREEN_WIDTH - ENEMY_WIDTH) / 2
-    mov byte [enemy_y], 4
     mov byte [enemy_health], INITIAL_ENEMY_HEALTH
     mov dword [enemy_alive], 1
     mov dword [alive_count], 1
@@ -550,7 +548,7 @@ start:
     call fire_bullet
     expect_reg bx, 1234h, 'spawning preserves BX'
     expect_reg si, 5678h, 'spawning preserves SI'
-; Rendering integration: compact art must retain its identifying details.
+    ; Rendering integration: every document character must survive unchanged.
     call clear_screen
     expect_word render_cursor, 0, 'frame clear resets drawing cursor'
     expect_word render_buffer, 0720h, 'frame clear blanks top left'
@@ -562,10 +560,10 @@ start:
     mov byte [player_x], SCREEN_WIDTH - PLAYER_WIDTH
     mov byte [player_y], SCREEN_HEIGHT - PLAYER_HEIGHT - 1
     call draw_player
-    expect_word render_buffer + ((SCREEN_HEIGHT - PLAYER_HEIGHT - 1) * SCREEN_WIDTH + SCREEN_WIDTH - PLAYER_WIDTH + 2) * 2, 0F2Dh, 'chef preserves compact hat detail'
-    expect_word render_buffer + ((SCREEN_HEIGHT - 2) * SCREEN_WIDTH + SCREEN_WIDTH - 1) * 2, 0F2Bh, 'chef fits bottom-right legal position'
+    expect_word render_buffer + ((SCREEN_HEIGHT - PLAYER_HEIGHT - 1) * SCREEN_WIDTH + SCREEN_WIDTH - PLAYER_WIDTH + 2) * 2, 0F23h, 'chef preserves original hat character'
+    expect_word render_buffer + ((SCREEN_HEIGHT - 2) * SCREEN_WIDTH + SCREEN_WIDTH - 1) * 2, 0F23h, 'chef fits bottom-right legal position'
     expect_word render_buffer + ((SCREEN_HEIGHT - 1) * SCREEN_WIDTH) * 2, 0720h, 'chef does not wrap onto following row'
-    mov si, test_chef_art
+    mov si, source_player_art
     mov di, render_buffer + ((SCREEN_HEIGHT - PLAYER_HEIGHT - 1) * SCREEN_WIDTH + SCREEN_WIDTH - PLAYER_WIDTH) * 2
     mov bl, 0Fh
     mov dx, chef_render_failed
@@ -580,7 +578,7 @@ start:
     call draw_bullet
     expect_word render_buffer + (2 * SCREEN_WIDTH + 2) * 2, 0E23h, 'rolling pin art drawn in yellow'
     expect_word render_buffer, 0720h, 'weapon avoids HUD row'
-    mov si, test_rolling_pin_art
+    mov si, source_rolling_pin_art
     mov di, render_buffer + SCREEN_WIDTH * 2
     mov bl, 0Eh
     mov dx, rolling_pin_render_failed
@@ -591,27 +589,27 @@ start:
     mov byte [bullets_kind], CLEAVER
     mov byte [bullets_damage], 1
     call draw_bullet
-    expect_word render_buffer + (2 * SCREEN_WIDTH + 2) * 2, 0B23h, 'compact cleaver art drawn in cyan'
-    mov si, test_cleaver_art
+    expect_word render_buffer + (2 * SCREEN_WIDTH + 2) * 2, 0B23h, 'full-size cleaver art drawn in cyan'
+    mov si, source_cleaver_art
     mov di, render_buffer + SCREEN_WIDTH * 2
     mov bl, 0Bh
     mov dx, cleaver_render_failed
     call verify_weapon_sprite
-    expect_word render_buffer + (SCREEN_WIDTH + WEAPON_WIDTH) * 2, 0720h, 'compact weapon leaves neighboring column clear'
-    expect_word render_buffer + ((PLAYFIELD_TOP + WEAPON_HEIGHT) * SCREEN_WIDTH) * 2, 0720h, 'compact weapon leaves following row clear'
+    expect_word render_buffer + (SCREEN_WIDTH + WEAPON_WIDTH) * 2, 0720h, 'full-size weapon leaves neighboring column clear'
+    expect_word render_buffer + ((PLAYFIELD_TOP + WEAPON_HEIGHT) * SCREEN_WIDTH) * 2, 0720h, 'full-size weapon leaves following row clear'
     call clear_screen
     mov byte [bullets_kind], ROLLING_PIN
     mov byte [bullets_damage], 2
     mov byte [bullets_x], SCREEN_WIDTH - WEAPON_WIDTH
     mov byte [bullets_y], SCREEN_HEIGHT - WEAPON_HEIGHT - 1
     call draw_bullet
-    mov si, test_rolling_pin_art
+    mov si, source_rolling_pin_art
     mov di, render_buffer + ((SCREEN_HEIGHT - WEAPON_HEIGHT - 1) * SCREEN_WIDTH + SCREEN_WIDTH - WEAPON_WIDTH) * 2
     mov bl, 0Eh
     mov dx, rolling_pin_render_failed
     call verify_weapon_sprite
-    expect_word render_buffer + ((SCREEN_HEIGHT - 2) * SCREEN_WIDTH + SCREEN_WIDTH - 1) * 2, 0E23h, 'compact weapon fits bottom-right without clipping'
-    expect_word render_buffer + ((SCREEN_HEIGHT - 1) * SCREEN_WIDTH) * 2, 0720h, 'compact weapon avoids footer at bottom-right'
+    expect_word render_buffer + ((SCREEN_HEIGHT - 2) * SCREEN_WIDTH + SCREEN_WIDTH - 1) * 2, 0E20h, 'full-size weapon fits bottom-right without clipping'
+    expect_word render_buffer + ((SCREEN_HEIGHT - 1) * SCREEN_WIDTH) * 2, 0720h, 'full-size weapon avoids footer at bottom-right'
     call initialize_player
     call initialize_bullets
     mov byte [game_state], PLAYING
@@ -643,12 +641,12 @@ start:
     mov ax, 4C00h
     int 21h
 
-; Compare the compact Chef cells and their colors with independent test art.
-; SI=source, DI=frame start, BL=color, DX=failure text.
+; Compare all 192 source characters, including spaces and their colors.
+; SI=independent document reference, DI=frame start, BL=color, DX=failure text.
 verify_document_sprite:
-    mov cx, PLAYER_HEIGHT
+    mov cx, SOURCE_ART_HEIGHT
 .row:
-    mov bp, PLAYER_WIDTH
+    mov bp, SOURCE_ART_WIDTH
 .cell:
     lodsb
     mov ah, bl
@@ -657,10 +655,10 @@ verify_document_sprite:
     add di, 2
     dec bp
     jnz .cell
-    add di, (SCREEN_WIDTH - PLAYER_WIDTH) * 2
+    add di, (SCREEN_WIDTH - SOURCE_ART_WIDTH) * 2
     loop .row
     ret
-; Compare the compact weapon cells with the independent test art.
+; Compare each native 12x16 weapon against the independent document copy.
 verify_weapon_sprite:
     mov cx, WEAPON_HEIGHT
 .row:
@@ -676,9 +674,9 @@ verify_weapon_sprite:
     add di, (SCREEN_WIDTH - WEAPON_WIDTH) * 2
     loop .row
     ret
-rolling_pin_render_failed db 'FAIL: compact rolling pin ASCII art differs from its test reference',13,10,'$'
+rolling_pin_render_failed db 'FAIL: full-size rolling pin ASCII art differs from its document design',13,10,'$'
 chef_render_failed db 'FAIL: every chef character and space matches the document',13,10,'$'
-cleaver_render_failed db 'FAIL: compact cleaver ASCII art differs from its test reference',13,10,'$'
+cleaver_render_failed db 'FAIL: full-size cleaver ASCII art differs from its document design',13,10,'$'
 
 tick_bullets:
     call update_bullets
@@ -695,5 +693,5 @@ fail:
     int 21h
     mov ax, 4C01h
     int 21h
-video_failed_text db 'FAIL: fullscreen SVGA display initialization',13,10,'$'
+video_failed_text db 'FAIL: enlarged SVGA display initialization',13,10,'$'
 passed: db 'PASS: Food Invaders player, dual weapons, boosts and collision tests', 13, 10, '$'

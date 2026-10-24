@@ -139,43 +139,43 @@ show_main_menu:
  popad
  ret
 
-; Draw the compact ASCII assets as a title-screen preview.
+; Draw the exact document ASCII assets as a title-screen preview.
 draw_menu_preview:
  pushad
  ; Five regular invaders, spaced only for the title-screen art preview.
- mov eax,(SCREEN_WIDTH-MENU_ENEMY_PREVIEW_COUNT*MENU_ENEMY_PREVIEW_WIDTH)/2 + (MENU_ENEMY_PREVIEW_WIDTH-11)/2
+ mov eax,(SCREEN_WIDTH-MENU_ENEMY_PREVIEW_COUNT*MENU_ENEMY_PREVIEW_WIDTH)/2 + (MENU_ENEMY_PREVIEW_WIDTH-22)/2
  mov edx,MENU_ENEMY_ROW
  mov esi,art_cupcake
- mov ecx,11
- mov ebp,8
+ mov ecx,22
+ mov ebp,16
  mov bl,0Dh
  call draw_rectangle_art
- mov eax,(SCREEN_WIDTH-MENU_ENEMY_PREVIEW_COUNT*MENU_ENEMY_PREVIEW_WIDTH)/2 + MENU_ENEMY_PREVIEW_WIDTH + (MENU_ENEMY_PREVIEW_WIDTH-7)/2
+ mov eax,(SCREEN_WIDTH-MENU_ENEMY_PREVIEW_COUNT*MENU_ENEMY_PREVIEW_WIDTH)/2 + MENU_ENEMY_PREVIEW_WIDTH + (MENU_ENEMY_PREVIEW_WIDTH-14)/2
  mov edx,MENU_ENEMY_ROW
  mov esi,art_fries
- mov ecx,7
- mov ebp,8
+ mov ecx,14
+ mov ebp,16
  mov bl,0Eh
  call draw_rectangle_art
- mov eax,(SCREEN_WIDTH-MENU_ENEMY_PREVIEW_COUNT*MENU_ENEMY_PREVIEW_WIDTH)/2 + MENU_ENEMY_PREVIEW_WIDTH*2 + (MENU_ENEMY_PREVIEW_WIDTH-7)/2
- mov edx,MENU_ENEMY_ROW+(8-6)/2
+ mov eax,(SCREEN_WIDTH-MENU_ENEMY_PREVIEW_COUNT*MENU_ENEMY_PREVIEW_WIDTH)/2 + MENU_ENEMY_PREVIEW_WIDTH*2 + (MENU_ENEMY_PREVIEW_WIDTH-14)/2
+ mov edx,MENU_ENEMY_ROW+(16-11)/2
  mov esi,art_burger
- mov ecx,7
- mov ebp,6
+ mov ecx,14
+ mov ebp,11
  mov bl,0Bh
  call draw_rectangle_art
- mov eax,(SCREEN_WIDTH-MENU_ENEMY_PREVIEW_COUNT*MENU_ENEMY_PREVIEW_WIDTH)/2 + MENU_ENEMY_PREVIEW_WIDTH*3 + (MENU_ENEMY_PREVIEW_WIDTH-7)/2
+ mov eax,(SCREEN_WIDTH-MENU_ENEMY_PREVIEW_COUNT*MENU_ENEMY_PREVIEW_WIDTH)/2 + MENU_ENEMY_PREVIEW_WIDTH*3 + (MENU_ENEMY_PREVIEW_WIDTH-14)/2
  mov edx,MENU_ENEMY_ROW
  mov esi,art_hotdog
- mov ecx,7
- mov ebp,8
+ mov ecx,14
+ mov ebp,16
  mov bl,0Ch
  call draw_rectangle_art
- mov eax,(SCREEN_WIDTH-MENU_ENEMY_PREVIEW_COUNT*MENU_ENEMY_PREVIEW_WIDTH)/2 + MENU_ENEMY_PREVIEW_WIDTH*4 + (MENU_ENEMY_PREVIEW_WIDTH-7)/2
+ mov eax,(SCREEN_WIDTH-MENU_ENEMY_PREVIEW_COUNT*MENU_ENEMY_PREVIEW_WIDTH)/2 + MENU_ENEMY_PREVIEW_WIDTH*4 + (MENU_ENEMY_PREVIEW_WIDTH-14)/2
  mov edx,MENU_ENEMY_ROW
  mov esi,art_pizza
- mov ecx,8
- mov ebp,8
+ mov ecx,14
+ mov ebp,16
  mov bl,0Ah
  call draw_rectangle_art
 
@@ -183,8 +183,8 @@ draw_menu_preview:
  mov eax,16
  mov edx,MENU_SHOWCASE_ROW
  mov esi,art_rat
- mov ecx,8
- mov ebp,8
+ mov ecx,15
+ mov ebp,16
  mov bl,0Fh
  call draw_rectangle_art
  mov eax,39
@@ -290,14 +290,14 @@ show_victory:
  popad
  ret
 
-; Result screens reuse the compact ASCII art shown during gameplay.
+; Result screens reuse the exact document ASCII art shown during gameplay.
 draw_result_preview:
  pushad
  mov eax,36
  mov edx,RESULT_ART_ROW
  mov esi,art_rat
- mov ecx,8
- mov ebp,8
+ mov ecx,15
+ mov ebp,16
  mov bl,0Fh
  call draw_rectangle_art
  mov eax,60

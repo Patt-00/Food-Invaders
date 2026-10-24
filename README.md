@@ -1,6 +1,6 @@
 # Food Invaders
 
-Food Invaders is a 16-bit NASM game for 386-compatible real-mode DOS. You play as the Chef and defend the kitchen from food-themed invaders with a cleaver and rolling pin. The 132 by 88 SVGA text board launches full-screen in DOSBox-X and preserves its 3:2 shape. Compact ASCII redraws keep each character recognizable at a smaller size.
+Food Invaders is a 16-bit NASM game for 386-compatible real-mode DOS. You play as the Chef and defend the kitchen from food-themed invaders with a cleaver and rolling pin. The 132 by 88 SVGA text board launches full-screen in DOSBox-X and preserves its 3:2 shape. The gameplay uses the exact ASCII art designs from the project document.
 
 ## Run on Linux
 

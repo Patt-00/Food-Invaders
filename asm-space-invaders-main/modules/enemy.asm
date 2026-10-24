@@ -78,7 +78,6 @@ random_enemy_position:
  mov ecx,ENEMY_BREACH_LINE
  sub ecx,[type_table+eax+T_H]
  sub ecx,TOP
- inc ecx
  mov eax,TOP
  call random_in_range
  mov [enemy_candidate_y],al
@@ -233,6 +232,7 @@ random_enemy_step:
 ; place_enemy_randomly(): EBX=slot, ESI=enemy pointer; scatter without overlap.
 place_enemy_randomly:
  mov byte [enemy_position_clearance],ENEMY_CLEARANCE
+ mov dword [enemy_position_attempts],0
 .random_try:
  call random_enemy_position
  mov eax,[esi+E_TYPE]
@@ -244,7 +244,36 @@ place_enemy_randomly:
  call enemy_position_is_clear
  jnc .placed
 .retry_candidate:
- ; Keep every spawn randomized; do not fall back to a fixed grid.
+ inc dword [enemy_position_attempts]
+ cmp dword [enemy_position_attempts],ENEMY_RANDOM_POSITION_TRIES
+ jb .random_try
+
+ ; If random rejection sampling fills a dense patch, scan from a random point
+ ; through the legal field while preserving the two-cell enemy clearance.
+ call random_enemy_position
+ mov al,[enemy_candidate_x]
+ mov [enemy_scan_start_x],al
+ mov al,[enemy_candidate_y]
+ mov [enemy_scan_start_y],al
+.scan:
+ call enemy_position_is_clear
+ jnc .placed
+ call advance_enemy_scan_position
+ jnc .scan
+ ; If sprites fragment the remaining room, search for an edge-touching slot
+ ; before starting another random placement pass. This still forbids overlap.
+ mov byte [enemy_position_clearance],0
+ call random_enemy_position
+ mov al,[enemy_candidate_x]
+ mov [enemy_scan_start_x],al
+ mov al,[enemy_candidate_y]
+ mov [enemy_scan_start_y],al
+.scan_tight:
+ call enemy_position_is_clear
+ jnc .placed
+ call advance_enemy_scan_position
+ jnc .scan_tight
+ mov dword [enemy_position_attempts],0
  jmp .random_try
 .placed:
  movzx eax,byte [enemy_candidate_x]
@@ -255,6 +284,41 @@ place_enemy_randomly:
  mov [esi+E_SY],eax
  mov dword [esi+E_ACTIVE],1
  mov byte [enemy_position_clearance],ENEMY_CLEARANCE
+ ret
+
+; Advance one legal coordinate in the placement scan; CF=1 after a full wrap.
+advance_enemy_scan_position:
+ mov eax,[esi+E_TYPE]
+ imul eax,T_SIZE
+ inc byte [enemy_candidate_x]
+ movzx edx,byte [enemy_candidate_x]
+ mov ecx,SCREEN_WIDTH
+ sub ecx,[type_table+eax+T_W]
+ cmp edx,ecx
+ jbe .check_wrap
+ mov byte [enemy_candidate_x],LEFT
+ inc byte [enemy_candidate_y]
+ mov eax,[esi+E_TYPE]
+ imul eax,T_SIZE
+ mov edx,ENEMY_BREACH_LINE
+ sub edx,[type_table+eax+T_H]
+ dec edx
+ movzx eax,byte [enemy_candidate_y]
+ cmp eax,edx
+ jbe .check_wrap
+ mov byte [enemy_candidate_y],TOP
+.check_wrap:
+ mov al,[enemy_candidate_x]
+ cmp al,[enemy_scan_start_x]
+ jne .continue
+ mov al,[enemy_candidate_y]
+ cmp al,[enemy_scan_start_y]
+ je .wrapped
+.continue:
+ clc
+ ret
+.wrapped:
+ stc
  ret
 
 ; scale_difficulty_interval(): EAX=base delay; return adjusted delay.

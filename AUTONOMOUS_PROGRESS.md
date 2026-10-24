@@ -12,8 +12,8 @@
 | Broader project gap | 16 percentage points, outside the active scope |
 | Repository | `https://github.com/Patt-00/Food-Invaders` |
 | Working branch | `main` |
-| Published source | Compact character drawings, universal monster firing timers, faster power-ups, and fullscreen output are included in the current main-branch update. |
-| Source branch synchronization | NASM and DOSBox-X normal/dynamic checks pass; GitHub `main` was read back after the fullscreen scaling update. |
+| Published source | Exact document character art, universal monster firing timers, faster power-ups, and fullscreen output are included in the current main-branch update. |
+| Source branch synchronization | NASM and DOSBox-X normal/dynamic checks pass; GitHub `main` is checked after this source update is published. |
 | Goal status | Complete for the code/game scope. Broader course deliverables remain outside this goal. |
 
 The broader project estimate uses the weighted rubric in `COMPLETION_AUDIT.md`. It includes group, course-document, and presentation requirements that the current code/game goal excludes. The Xvfb captures used a virtual X11 display, not a physical presentation computer, and a human-length campaign was not played.
@@ -32,7 +32,7 @@ The broader project estimate uses the weighted rubric in `COMPLETION_AUDIT.md`. 
 | 2026-10-20 | Audited the actual CS 003 requirements and the current group report without editing the Google Doc. | Read-only Google Drive review identified old screen dimensions and test counts, blank Appendix C, missing Appendix D evidence, pending library reference, and group review items. |
 | 2026-10-20 | Added the weighted completion audit and presentation-readiness guide. | `COMPLETION_AUDIT.md` assigns status, points, evidence, remaining work, and priority to project-specific requirements. |
 | 2026-10-20 | Created a ten-slide editable PowerPoint with presenter notes. | Artifact Tool finalization passed package integrity, layout geometry, font policy, and first-party import checks. LibreOffice 26.2.6.3 imported the deck and rendered ten PDF pages; all ten were inspected at full size. Slide 9 was corrected after the first visual review. |
-| 2026-10-24 | Redrew compact ASCII characters with identifying details, armed every monster with an independent random firing timer, sped up falling power-ups, and set DOSBox-X to full-screen 3:2 output. | NASM built all four COM files. Headless suites pass; DOSBox-X normal and dynamic 386 suites each pass with 43,538 core assertions. A windowed DOSBox-X preview shows the compact art. Fullscreen Xvfb capture was blank, so review the fullscreen appearance on the presentation display. |
+| 2026-10-24 | Restored the exact document ASCII artwork at source dimensions, armed every monster with an independent random firing timer, sped up falling power-ups, and set DOSBox-X to full-screen 3:2 output. | NASM built all five COM files with warnings treated as errors. `RUNTEST.BAT` passed on DOSBox-X normal and dynamic 386 cores, with 43,538 core assertions per run. The test configuration used surface output with a 3:2 aspect setting. The current build also launched full-screen on the 1920 by 1080 Xwayland display; a live capture shows the complete gameplay art. Xvfb did not produce a usable full-screen capture. |
 
 ## Broader project backlog outside the active code/game goal
 

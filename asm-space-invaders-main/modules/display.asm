@@ -336,9 +336,9 @@ draw_sprite:
 
 ; -------------------------------------------------
 ; Procedure: draw_weapon_sprite
-; Purpose: Draw the compact 6x8 weapon art.
+; Purpose: Draw the exact 12x16 weapon artwork.
 ; Input: DS:SI=source art, DH=row, DL=column, BL=color.
-; Output: Every compact ASCII cell is rendered at the player's position.
+; Output: Every source character is rendered at the player's position.
 ; Modifies: Flags only; all general-purpose registers preserved.
 ; Shared: render_buffer. Chef and enemies use the same rectangle renderer.
 ; -------------------------------------------------

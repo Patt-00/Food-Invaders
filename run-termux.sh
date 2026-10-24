@@ -30,7 +30,7 @@ fi
 
 am start -n com.termux.x11/.MainActivity >/dev/null 2>&1 || true
 # Use the full Termux:X11 display while preserving the board's 3:2 ratio.
-# Character artwork is rendered at half its source dimensions.
+# Character artwork is rendered at its documented text-cell dimensions.
 set -- $(xdpyinfo -display "$DISPLAY" | awk '/dimensions:/ {split($2, size, "x"); print size[1], size[2]; exit}')
 display_width=$1
 display_height=$2

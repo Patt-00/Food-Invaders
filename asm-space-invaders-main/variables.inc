@@ -3,12 +3,12 @@
 SCREEN_WIDTH    equ 132
 SCREEN_HEIGHT   equ 88
 PLAYFIELD_TOP   equ 1        ; Row zero belongs to the HUD.
-PLAYER_WIDTH    equ 6
-PLAYER_HEIGHT   equ 8
+PLAYER_WIDTH    equ 12
+PLAYER_HEIGHT   equ 16
 SOURCE_ART_WIDTH equ 12
 SOURCE_ART_HEIGHT equ 16
-WEAPON_WIDTH    equ 6
-WEAPON_HEIGHT   equ 8
+WEAPON_WIDTH    equ SOURCE_ART_WIDTH
+WEAPON_HEIGHT   equ SOURCE_ART_HEIGHT
 SOURCE_PICKUP_WIDTH equ 14
 SOURCE_PICKUP_HEIGHT equ 18
 BULLET_SPEED    equ 2        ; Keeps a shot in the shorter viewport through its cooldown.
@@ -29,12 +29,12 @@ PLAYER_HITBOX_HEIGHT equ PLAYER_HEIGHT
     %error "Text frame must fit in VGA text memory"
 %endif
 
-; Gameplay hitboxes use compact bounds at half the source-art dimensions.
-%if PLAYER_WIDTH * 2 != SOURCE_ART_WIDTH || PLAYER_HEIGHT * 2 != SOURCE_ART_HEIGHT
-    %error "Chef dimensions must be half the source artwork"
+; Gameplay hitboxes match the exact document artwork dimensions.
+%if PLAYER_WIDTH != SOURCE_ART_WIDTH || PLAYER_HEIGHT != SOURCE_ART_HEIGHT
+    %error "Chef dimensions must match the source artwork"
 %endif
-%if WEAPON_WIDTH * 2 != SOURCE_ART_WIDTH || WEAPON_HEIGHT * 2 != SOURCE_ART_HEIGHT
-    %error "Weapon dimensions must be half the source artwork"
+%if WEAPON_WIDTH != SOURCE_ART_WIDTH || WEAPON_HEIGHT != SOURCE_ART_HEIGHT
+    %error "Weapon dimensions must match the source artwork"
 %endif
 %if BULLET_SPEED < 1 || BULLET_SPEED > WEAPON_HEIGHT
     %error "Projectile steps must stay within sprite height to avoid skipped collisions"
@@ -53,10 +53,10 @@ BOOST_BURST_COUNT equ 2
 BOOST_FRAMES    equ 80       ; Roughly four seconds.
 INITIAL_ENEMY_HEALTH equ 8   ; Eight cleavers or four rolling pins per demo enemy.
 PICKUP_STEP_TICKS equ 1      ; A falling pickup moves once every 50 ms.
-PICKUP_WIDTH equ 7
-PICKUP_HEIGHT equ 9
-%if PICKUP_WIDTH * 2 != SOURCE_PICKUP_WIDTH || PICKUP_HEIGHT * 2 != SOURCE_PICKUP_HEIGHT
-    %error "Pickup dimensions must be half the source artwork"
+PICKUP_WIDTH equ SOURCE_PICKUP_WIDTH
+PICKUP_HEIGHT equ SOURCE_PICKUP_HEIGHT
+%if PICKUP_WIDTH != SOURCE_PICKUP_WIDTH || PICKUP_HEIGHT != SOURCE_PICKUP_HEIGHT
+    %error "Pickup dimensions must match the source artwork"
 %endif
 
 ENEMY_MOVE_BASE_MIN_MS equ 120
@@ -79,14 +79,15 @@ HOSTILE_SHOT_STAGE_ACCEL_MS equ 15
 %define POWERUP_DAMAGE 2
 %define POWERUP_RAPID 3
 
-ENEMY_WIDTH     equ 11       ; Widest compact design: the cupcake.
-ENEMY_HEIGHT    equ 8        ; Tallest compact food enemy.
+ENEMY_WIDTH     equ 22       ; Widest source design: the cupcake.
+ENEMY_HEIGHT    equ 16       ; Tallest food enemy source design.
 MENU_ENEMY_PREVIEW_COUNT equ 5
 MENU_ENEMY_PREVIEW_WIDTH equ (SCREEN_WIDTH / MENU_ENEMY_PREVIEW_COUNT)
 ; Enemies roam the full field but stop above the Chef's safe area.
 ENEMY_CHEF_SAFE_GAP equ 8
 ENEMY_BREACH_LINE equ (SCREEN_HEIGHT - PLAYER_HEIGHT - 1 - ENEMY_CHEF_SAFE_GAP)
 ENEMY_CLEARANCE equ 2
+ENEMY_RANDOM_POSITION_TRIES equ 64
 ENEMY_RANDOM_STEP_TRIES equ 12
 enemy_move_step_x_by_wave db 4,6,8,10
 enemy_move_step_y_by_wave db 2,3,4,5
@@ -208,6 +209,8 @@ enemy_fire_timers times MAX_ENEMIES dd 0
 enemy_fire_intervals times MAX_ENEMIES dd 0
 enemy_candidate_x db 0
 enemy_candidate_y db 0
+enemy_scan_start_x db 0
+enemy_scan_start_y db 0
 enemy_step_dx db 0
 enemy_step_dy db 0
 enemy_position_attempts dd 0
