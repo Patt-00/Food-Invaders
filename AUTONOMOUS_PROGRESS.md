@@ -8,8 +8,8 @@
 | Verified code/game completion | 100% |
 | Remaining code/game gap | 0 percentage points |
 | Initial completion estimate | 76% |
-| Broader project estimate | 84% |
-| Broader project gap | 16 percentage points, outside the active scope |
+| Broader project estimate | 87% |
+| Broader project gap | 13 percentage points, outside the active scope |
 | Repository | `https://github.com/Patt-00/Food-Invaders` |
 | Working branch | `main` |
 | Published source | Exact document character art, universal monster firing timers, faster power-ups, and fullscreen output are included in the current main-branch update. |

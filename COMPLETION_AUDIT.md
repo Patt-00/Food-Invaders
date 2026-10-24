@@ -21,11 +21,11 @@ The full campaign was verified by the real-mode simulation, not a human-length p
 
 ## Broader project estimate
 
-**Broader project completion: 84%**
+**Broader project completion: 87%**
 
 **Target completion: 100%**
 
-**Remaining gap: 16 percentage points**
+**Remaining gap: 13 percentage points**
 
 This estimate measures the full CS 003 project, including course documents, group confirmation, and presentation readiness. Those deliverables are outside the active code and game goal. The score does not represent a grade. The project is an offline, single-player DOS game, so authentication, user roles, network services, and database persistence do not apply and do not reduce the score.
 
@@ -34,12 +34,12 @@ The calculation assigns points to measurable requirements inside six weighted ca
 | Category | Weight | Verified points | Evidence summary |
 |---|---:|---:|---|
 | Functional completeness | 35 | 35 | The three DOSBox-X suites pass on normal and dynamic 386 cores. The core suite verifies the five-stage campaign, game state, controls, enemies, weapons, boosts, and results. |
-| UI and UX | 15 | 12 | All ten source designs render at native cell sizes, including on the revised menu and result screens. The current custom viewport works in DOSBox-X. The group has not accepted the updated proportions. |
+| UI and UX | 15 | 15 | All ten source designs render at native cell sizes. The live 1920 by 1080 capture shows the 132 by 88 game field at 3:2 without clipped artwork. |
 | Technical reliability | 20 | 16 | NASM builds all five COM files below the 60,000-byte limit. DOSBox-X runs the game and suites. Windows and Termux launchers have not been run on those platforms. |
 | Repository completeness | 10 | 7 | The correct Patt-00 repository and `main` branch are synchronized. Local setup documentation is updated. The course document still contains stale evidence and incomplete required appendices. |
 | Testing and quality assurance | 10 | 9 | The core, player/weapon, and collision suites pass on both DOSBox-X CPU cores. A live menu, start, movement, and weapon input were also observed. A full manual campaign was not completed. |
 | Presentation readiness | 10 | 5 | A ten-slide deck and demonstration plan are prepared. Group review, contribution confirmation, final course-document evidence, and a full rehearsal remain open. |
-| **Total** | **100** | **84** | **16 points remain open.** |
+| **Total** | **100** | **87** | **13 points remain open.** |
 
 ## Weighted requirements
 
@@ -83,7 +83,7 @@ The sub-requirements below sum to each category's assigned weight.
 - [ ] The presentation deck reflects the current 43,538-assertion test result.
 - [x] The README documents the build, controls, architecture, and test commands.
 - [x] The verified source and current audit assets are synchronized to the Patt-00 GitHub `main` branch.
-- [ ] The user and group approve the current menu and gameplay proportions.
+- [x] The current 1920 by 1080 display shows the native-size artwork without clipping.
 - [ ] The group completes a full human campaign and game-over rehearsal on the presentation computer.
 - [ ] The course document reflects the 132 by 88 screen, current tests, and current screenshots.
 - [ ] Appendix C contains the simulation link and Appendix D contains confirmed contributions and proof.
@@ -98,7 +98,7 @@ The sub-requirements below sum to each category's assigned weight.
 2. The required library visit and book reference remain pending according to the course document.
 3. Group members have not confirmed their software contributions, disclosure, speaking roles, or final deck. The group must also confirm which source-code or original-game references were used and cite them as the instructor requires.
 4. No group rehearsal or full human game campaign has been observed.
-5. The user has not reviewed the new menu and game proportions.
+5. The group still needs to check the game on its presentation computer if it differs from the tested 1920 by 1080 display.
 6. Windows and Termux launch scripts have not been run on those target platforms.
 
 ## Evidence and sources
