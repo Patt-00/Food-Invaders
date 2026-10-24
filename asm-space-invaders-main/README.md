@@ -8,13 +8,13 @@ Food Invaders takes its core gameplay idea from Space Invaders. A playable text-
 
 ## Build and run
 
-From this directory, build the game with NASM:
+See the [Windows and macOS building guide](../docs/BUILDING-GUIDE.md) for prerequisite installation and host-specific commands. From this directory, build the game with NASM:
 
 ```sh
 nasm -f bin main.asm -o INVADERS.COM
 ```
 
-`build.bat` provides the same basic build on Windows. `build.ps1 -Test -Core normal` assembles the game and three regression suites, then runs them in DOSBox-X. Repeat with `-Core dynamic` to test the other supported CPU core. All COM files must stay below 60,000 bytes to leave room for the DOS stack.
+`build.bat` provides the basic Windows build. `build.ps1 -Test -Core normal` assembles the game, four test programs, and checks their size, then runs the three regression suites in DOSBox-X. Repeat with `-Core dynamic` to test the other supported CPU core. All COM files must stay below 60,000 bytes to leave room for the DOS stack.
 
 Run with **DOSBox-X** and the `machine=svga_s3` setting. The program sets custom horizontal and vertical timing for 156 columns and 104 rows of 8 scanlines. `dosbox.conf` supplies the emulator settings and starts `INVADERS.COM` when DOSBox-X starts from this directory. On Windows, use `run-dosbox.ps1 -DosBoxPath <path-to-dosbox-x>`. On Termux, use `../run-termux.sh` with Termux X11.
 
@@ -70,7 +70,7 @@ Keep gameplay free of rendering interrupts, use one shared definition for each v
 
 ## Tests
 
-`build.ps1 -Test` assembles and runs the core, player/weapon, and collision suites. The script saves their DOSBox-X output to `tests/integrated-<core>-result.txt`. `tests/integrated-binary-hashes.json` records the current game and core-test binary hashes. The older `tests/normal-result.txt`, `tests/dynamic-result.txt`, `tests/merged-result.txt`, and `tests/binary-hashes.json` preserve earlier validation records.
+`build.ps1 -Test` assembles and runs the core, player/weapon, and collision suites. The script saves their DOSBox-X output to `tests/integrated-<core>-result.txt`. `tests/integrated-binary-hashes.json` records the game and core-test binary hashes for that validation.
 
 For direct assembly, use these commands:
 
@@ -90,4 +90,4 @@ python3 -m pip install -r requirements-test.txt
 python3 tests/run-headless.py TEST.COM PBTEST.COM COLLTEST.COM
 ```
 
-This runs the assembled x86 code with stubbed BIOS/DOS services and verifies frame-buffer/VGA memory. It does **not** validate actual DOSBox-X video timing or a manual playthrough. See `MERGE-VALIDATION.md` for validation of this integrated version. `TEST-REPORT.md`, `tests/normal-result.txt`, and `tests/dynamic-result.txt` describe the earlier enemy-branch baseline.
+This optional runner executes assembled x86 code with stubbed BIOS/DOS services and verifies frame-buffer/VGA memory. It does **not** validate DOSBox-X video timing or a manual playthrough. The current normal and dynamic DOSBox-X results are stored in `tests/integrated-normal-result.txt` and `tests/integrated-dynamic-result.txt`. The host-specific prerequisite instructions are in [the building guide](../docs/BUILDING-GUIDE.md).

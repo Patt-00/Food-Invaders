@@ -22,6 +22,10 @@ Install NASM and DOSBox-X in Termux. Install the Termux:X11 app and companion pa
 
 The game uses DOSBox-X's SVGA S3 mode. Its launcher fills the Termux:X11 display while preserving the board's proportions. A plain text-only Termux session is not enough for the game window.
 
+## Run on Windows or macOS
+
+See the [Windows and macOS building guide](docs/BUILDING-GUIDE.md) for NASM and DOSBox-X installation, build commands, and launch steps.
+
 ## Controls
 
 | Key | Action |
@@ -38,4 +42,6 @@ The four regular waves place enemies at random positions across the playfield. E
 
 ## Project details
 
-The [game README](asm-space-invaders-main/README.md) covers wave behavior, the playable text-mode reference, module roles, and manual test commands. Recorded DOSBox-X results are available for the [normal CPU core](asm-space-invaders-main/tests/integrated-normal-result.txt) and [dynamic CPU core](asm-space-invaders-main/tests/integrated-dynamic-result.txt).
+The [game README](asm-space-invaders-main/README.md) covers wave behavior, the playable text-mode reference, module roles, and regression tests. The [Windows and macOS building guide](docs/BUILDING-GUIDE.md) installs prerequisites and walks through building and launching. The [Developer 2 contribution](asm-space-invaders-main/DEVELOPER2.md) describes the player and weapon work.
+
+The [normal-core test result](asm-space-invaders-main/tests/integrated-normal-result.txt) and [dynamic-core test result](asm-space-invaders-main/tests/integrated-dynamic-result.txt) record the latest local DOSBox-X runs.

@@ -5,3 +5,9 @@ RESULT.TXT
 *-preview.png
 asm-space-invaders-main/capture/
 .codex-build/
+/asm-space-invaders-main/TESTLOG.TXT
+/asm-space-invaders-main/PBLOG.TXT
+/asm-space-invaders-main/COLLLOG.TXT
+/asm-space-invaders-main/STATUS.TXT
+/asm-space-invaders-main/tests/generated-test.conf
+/asm-space-invaders-main/tests/dosbox-host.log

@@ -4,7 +4,7 @@ $sourceRoot = $PSScriptRoot
 if (!$NasmPath) {
     $nasmCommand = Get-Command nasm -ErrorAction SilentlyContinue
     if ($nasmCommand) { $NasmPath = $nasmCommand.Source }
-    else { $NasmPath = Join-Path $sourceRoot '../../../work/toolchain/nasm/nasm-3.01/nasm.exe' }
+    else { throw 'NASM not found. Add nasm to PATH or supply -NasmPath with its executable.' }
 }
 if (!(Test-Path -LiteralPath $NasmPath)) { throw 'NASM not found. Supply -NasmPath with your NASM executable.' }
 $NasmPath = (Resolve-Path -LiteralPath $NasmPath).Path
@@ -22,7 +22,9 @@ try {
         if ($LASTEXITCODE -ne 0) { throw 'Player and weapon test assembly failed.' }
         & $NasmPath -f bin -Wall -w-reloc -Werror tests/collision.asm -o COLLTEST.COM
         if ($LASTEXITCODE -ne 0) { throw 'Collision test assembly failed.' }
-        foreach ($testBinary in @('TEST.COM', 'PBTEST.COM', 'COLLTEST.COM')) {
+        & $NasmPath -f bin -Wall -w-reloc -Werror -DSELFTEST -DVISUAL_TEST main.asm -o WINTEST.COM
+        if ($LASTEXITCODE -ne 0) { throw 'Visual test assembly failed.' }
+        foreach ($testBinary in @('TEST.COM', 'PBTEST.COM', 'COLLTEST.COM', 'WINTEST.COM')) {
             if ((Get-Item $testBinary).Length -ge 60000) { throw "$testBinary exceeds segment budget." }
         }
         if (!$DosBoxPath) {

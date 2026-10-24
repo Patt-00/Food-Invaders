@@ -1,0 +1,100 @@
+name: Windows and macOS build tests
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  windows:
+    name: Windows x64
+    runs-on: windows-latest
+    timeout-minutes: 30
+    env:
+      SDL_VIDEODRIVER: dummy
+      SDL_AUDIODRIVER: dummy
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Install NASM and DOSBox-X
+        shell: pwsh
+        run: |
+          $nasmZip = Join-Path $env:RUNNER_TEMP 'nasm.zip'
+          Invoke-WebRequest 'https://www.nasm.us/pub/nasm/releasebuilds/3.02/win64/nasm-3.02-win64.zip' -OutFile $nasmZip
+          Expand-Archive -LiteralPath $nasmZip -DestinationPath (Join-Path $env:RUNNER_TEMP 'nasm') -Force
+
+          $dosboxZip = Join-Path $env:RUNNER_TEMP 'dosbox-x.zip'
+          Invoke-WebRequest 'https://github.com/joncampbell123/dosbox-x/releases/download/dosbox-x-v2026.10.01/dosbox-x-vsbuild-win64-2026.10.01-portable.zip' -OutFile $dosboxZip
+          Expand-Archive -LiteralPath $dosboxZip -DestinationPath (Join-Path $env:RUNNER_TEMP 'dosbox-x') -Force
+
+          $nasmPath = Join-Path $env:RUNNER_TEMP 'nasm\nasm-3.02\nasm.exe'
+          $dosboxPath = Join-Path $env:RUNNER_TEMP 'dosbox-x\bin\x64\Release\dosbox-x.exe'
+          if (!(Test-Path -LiteralPath $nasmPath)) { throw 'NASM was not found after extraction.' }
+          if (!(Test-Path -LiteralPath $dosboxPath)) { throw 'DOSBox-X was not found after extraction.' }
+          "NASM_PATH=$nasmPath" | Out-File -FilePath $env:GITHUB_ENV -Append -Encoding utf8
+          "DOSBOX_X_PATH=$dosboxPath" | Out-File -FilePath $env:GITHUB_ENV -Append -Encoding utf8
+
+      - name: Build and run normal-core suites
+        shell: pwsh
+        working-directory: asm-space-invaders-main
+        run: |
+          & .\build.ps1 -NasmPath "$env:NASM_PATH" -DosBoxPath "$env:DOSBOX_X_PATH" -Test -Core normal
+
+      - name: Run dynamic-core suites
+        shell: pwsh
+        working-directory: asm-space-invaders-main
+        run: |
+          & .\build.ps1 -NasmPath "$env:NASM_PATH" -DosBoxPath "$env:DOSBOX_X_PATH" -Test -Core dynamic
+
+  macos:
+    name: macOS
+    runs-on: macos-latest
+    timeout-minutes: 45
+    env:
+      SDL_VIDEODRIVER: dummy
+      SDL_AUDIODRIVER: dummy
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Install NASM
+        run: brew install nasm
+
+      - name: Install PowerShell 7
+        shell: bash
+        run: |
+          case "$(uname -m)" in
+            arm64) powershell_asset=powershell-7.6.6-osx-arm64.pkg ;;
+            x86_64) powershell_asset=powershell-7.6.6-osx-x64.pkg ;;
+            *) echo "Unsupported runner architecture: $(uname -m)" >&2; exit 1 ;;
+          esac
+          powershell_url="https://github.com/PowerShell/PowerShell/releases/download/v7.6.6/$powershell_asset"
+          curl --fail --location "$powershell_url" --output "$RUNNER_TEMP/powershell.pkg"
+          sudo installer -pkg "$RUNNER_TEMP/powershell.pkg" -target /
+
+      - name: Download DOSBox-X for this runner architecture
+        shell: bash
+        run: |
+          case "$(uname -m)" in
+            arm64) dosbox_asset=dosbox-x-macosx-arm64-2026.10.01.zip ;;
+            x86_64) dosbox_asset=dosbox-x-macosx-x86_64-2026.10.01.zip ;;
+            *) echo "Unsupported runner architecture: $(uname -m)" >&2; exit 1 ;;
+          esac
+          dosbox_url="https://github.com/joncampbell123/dosbox-x/releases/download/dosbox-x-v2026.10.01/$dosbox_asset"
+          curl --fail --location "$dosbox_url" --output "$RUNNER_TEMP/dosbox-x.zip"
+          mkdir -p "$RUNNER_TEMP/dosbox-x"
+          unzip -q "$RUNNER_TEMP/dosbox-x.zip" -d "$RUNNER_TEMP/dosbox-x"
+          dosbox_path="$RUNNER_TEMP/dosbox-x/dosbox-x/dosbox-x.app/Contents/MacOS/dosbox-x"
+          test -x "$dosbox_path"
+          echo "DOSBOX_X_PATH=$dosbox_path" >> "$GITHUB_ENV"
+
+      - name: Build and run normal-core suites
+        working-directory: asm-space-invaders-main
+        run: pwsh -NoProfile -File ./build.ps1 -NasmPath "$(command -v nasm)" -DosBoxPath "$DOSBOX_X_PATH" -Test -Core normal
+
+      - name: Run dynamic-core suites
+        working-directory: asm-space-invaders-main
+        run: pwsh -NoProfile -File ./build.ps1 -NasmPath "$(command -v nasm)" -DosBoxPath "$DOSBOX_X_PATH" -Test -Core dynamic

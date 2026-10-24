@@ -1,9 +1,0 @@
-Merged-branch validation, 2026-10-17
-NASM 2.16.03, -f bin -Wall -w-reloc -Werror
-Unicorn 2.1.4, 16-bit x86 execution with stubbed BIOS/DOS services
-
-COLLTEST.COM: PASS: collision geometry, damage, priority, guards and registers
-PBTEST.COM: PASS: Food Invaders player, dual weapons, boosts and collision tests
-TEST.COM: PASS: 40280 assertions (real mode, 32-bit calculations)
-
-Actual DOSBox-X video timing and a manual playthrough were not tested.
