@@ -56,7 +56,7 @@ aspect=false
 modeswitch=false
 glshader=none
 [cpu]
-cycles=fixed 12000
+cycles=max
 [midi]
 mididevice=none
 EOF

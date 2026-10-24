@@ -20,7 +20,6 @@ TEST_MENU_TITLE_X equ (SCREEN_WIDTH-title_art_width)/2
 TEST_MENU_DIFFICULTY_X equ (SCREEN_WIDTH-difficulty_text_width)/2
 TEST_GAMEOVER_TITLE_X equ (SCREEN_WIDTH-gameover_art_width)/2
 TEST_VICTORY_TITLE_X equ (SCREEN_WIDTH-victory_text_width)/2
-TEST_CUPCAKE_Y equ ENEMY_FRONT_TOP+(ENEMY_FRONT_BAND_HEIGHT-SOURCE_ART_HEIGHT)/2
 ; Assertions exercise compiled game routines, not a reimplementation/model.
 %macro check 3
  cmp %1,%2
@@ -44,48 +43,73 @@ tests_start:
  cld
  call initialize_game
  check byte [game_state],PLAYING,'new game state'
- check dword [alive_count],10,'formation count'
+ check dword [alive_count],10,'wave enemy count'
  check byte [player_lives],3,'starting lives'
  check dword [enemies+2*E_SIZE+E_HP],2,'burger HP'
  check dword [enemies+4*E_SIZE+E_HP],2,'pizza HP'
- check dword [enemies+E_Y],ENEMY_FRONT_TOP+(ENEMY_FRONT_BAND_HEIGHT-SOURCE_ART_HEIGHT)/2,'front enemies fit the 3:2 viewport'
- check dword [enemies+5*E_SIZE+E_Y],ENEMY_REAR_TOP+(ENEMY_REAR_BAND_HEIGHT-SOURCE_ART_HEIGHT)/2,'rear enemies stay clear of the front band'
- ; Each wave spreads shooter types and tightens its timing profile.
- call get_test_shooter_lane_mask
- check eax,29,'stage 1 shooters cover left middle and right lanes'
+ ; Each wave scatters enemies across the field and adds active shooters.
+ mov dword [random_state],0x12345678
+ call initialize_enemies
+ call verify_enemy_scatter
+ call get_test_shooter_count
+ check eax,4,'stage 1 has four shooters'
  check dword [attack_min_interval],2600,'stage 1 attack cadence'
- check dword [enemy_move_min_interval],180,'stage 1 movement cadence'
- check dword [enemy_lane_drop_min_interval],4000,'stage 1 descent cadence'
- check dword [enemy_shot_step_ms],170,'stage 1 hostile-shot speed'
+ check dword [enemy_move_min_interval],120,'stage 1 movement cadence'
+ check dword [enemy_shot_step_ms],80,'stage 1 hostile-shot speed'
+ push dword 10
+ push dword 10
+ call spawn_enemy_projectile
+ add esp,8
+ call update_hostile_bullets
+ check dword [shots+S_Y],10,'patrol projectile waits for its configured interval'
+ call update_hostile_bullets
+ check dword [shots+S_Y],11,'patrol projectile advances after two game ticks'
  mov dword [current_wave],2
  call initialize_enemies
- call get_test_shooter_lane_mask
- check eax,23,'stage 2 shooters cover left middle and right lanes'
+ call verify_enemy_scatter
+ call get_test_shooter_count
+ check eax,5,'stage 2 adds a shooter'
  check dword [attack_min_interval],2250,'stage 2 attack cadence increases'
- check dword [enemy_move_min_interval],155,'stage 2 movement cadence increases'
- check dword [enemy_lane_drop_min_interval],3600,'stage 2 descent cadence increases'
- check dword [enemy_shot_step_ms],150,'stage 2 hostile shots speed up'
- check dword [enemies+2*E_SIZE+E_Y],ENEMY_FRONT_TOP+2,'stage 2 uses a V formation'
+ check dword [enemy_move_min_interval],100,'stage 2 movement cadence increases'
+ check dword [enemy_shot_step_ms],65,'stage 2 hostile shots speed up'
+ push dword 10
+ push dword 10
+ call spawn_enemy_projectile
+ add esp,8
+ call update_hostile_bullets
+ check dword [shots+S_Y],10,'flankers projectile waits one tick'
+ call update_hostile_bullets
+ check dword [shots+S_Y],11,'flankers projectile advances on the next tick'
  call draw_game
- check word [back_buffer+(SCREEN_WIDTH+7)*2],0E46h,'stage 2 formation name appears in the HUD'
+ check word [back_buffer+(SCREEN_WIDTH+7)*2],0E46h,'stage 2 profile name appears in the HUD'
  mov dword [current_wave],3
  call initialize_enemies
- call get_test_shooter_lane_mask
- check eax,23,'stage 3 shooters cover left middle and right lanes'
+ call verify_enemy_scatter
+ call get_test_shooter_count
+ check eax,6,'stage 3 adds another shooter'
  check dword [attack_min_interval],1900,'stage 3 attack cadence increases'
- check dword [enemy_move_min_interval],130,'stage 3 movement cadence increases'
- check dword [enemy_lane_drop_min_interval],3200,'stage 3 descent cadence increases'
- check dword [enemy_shot_step_ms],130,'stage 3 hostile shots speed up'
- check dword [enemies+E_Y],ENEMY_FRONT_TOP+3,'stage 3 uses an inverted V formation'
+ check dword [enemy_move_min_interval],80,'stage 3 movement cadence increases'
+ check dword [enemy_shot_step_ms],50,'stage 3 hostile shots speed up'
+ push dword 10
+ push dword 10
+ call spawn_enemy_projectile
+ add esp,8
+ call update_hostile_bullets
+ check dword [shots+S_Y],11,'crossfire projectile advances every game tick'
  mov dword [current_wave],4
  call initialize_enemies
- call get_test_shooter_lane_mask
- check eax,15,'stage 4 shooters cover left middle and right lanes'
+ call verify_enemy_scatter
+ call get_test_shooter_count
+ check eax,7,'stage 4 has the most shooters'
  check dword [attack_min_interval],1550,'stage 4 attack cadence increases'
- check dword [enemy_move_min_interval],105,'stage 4 movement cadence increases'
- check dword [enemy_lane_drop_min_interval],2800,'stage 4 descent cadence increases'
- check dword [enemy_shot_step_ms],110,'stage 4 hostile shots speed up'
- check dword [enemies+E_SIZE+E_Y],ENEMY_FRONT_TOP+3,'stage 4 uses a zigzag formation'
+ check dword [enemy_move_min_interval],60,'stage 4 movement cadence increases'
+ check dword [enemy_shot_step_ms],35,'stage 4 hostile shots speed up'
+ push dword 10
+ push dword 10
+ call spawn_enemy_projectile
+ add esp,8
+ call update_hostile_bullets
+ check dword [shots+S_Y],11,'last stand projectile advances every game tick'
  call initialize_game
  ; A cleared wave must not inherit elapsed movement or firing time.
  mov dword [enemy_move_timers],0A1B2C3D4h
@@ -97,14 +121,13 @@ tests_start:
  check dword [enemy_move_timers+(MAX_ENEMIES-1)*4],0,'new stage clears last movement timer'
  check dword [enemy_fire_timers],0,'new stage clears first firing timer'
  check dword [enemy_fire_timers+(MAX_ENEMIES-1)*4],0,'new stage clears last firing timer'
+ call solo
  ; Isolate the randomized per-enemy timer with a deterministic fixture.
  ; Five 50 ms ticks must not move; the sixth expires the 300 ms interval.
  mov dword [enemies+E_X],10
  mov dword [enemies+E_Y],3
  mov dword [enemy_move_intervals],300
  mov dword [enemy_move_timers],0
- mov byte [enemy_target_x],11
- mov byte [enemy_target_y],4
  mov ebx,5
 .wait:
  push dword 50
@@ -112,97 +135,23 @@ tests_start:
  add esp,4
  dec ebx
  jnz .wait
- check dword [enemies+E_X],10,'movement cooldown'
- check dword [enemies+E_Y],3,'movement y cooldown'
+ check dword [enemies+E_X],10,'movement cooldown x'
+ check dword [enemies+E_Y],3,'movement cooldown y'
  check dword [enemy_move_timers],250,'movement timer accumulates elapsed time'
  push dword 50
  call update_enemies
  add esp,4
- cmp dword [enemies+E_X],11
- je .timed_x_step
- check dword [enemies+E_X],10,'timed vertical step keeps x'
- check dword [enemies+E_Y],4,'randomized timer permits vertical step'
- jmp .timed_step_done
-.timed_x_step:
- check dword [enemies+E_X],11,'randomized timer permits horizontal x step'
- check dword [enemies+E_Y],3,'randomized timer permits horizontal step'
-.timed_step_done:
+ cmp dword [enemies+E_X],10
+ jne .timed_step_moved
+ mov eax,[enemies+E_Y]
+ check eax,3,'timed random step changes at least one axis'
+.timed_step_moved:
  check dword [enemy_move_timers],0,'movement timer consumes elapsed interval'
- ; Fixed seeds exercise independent horizontal and vertical target movement.
+ ; Fixed seeds exercise independent random directions on both axes.
  call solo
  mov dword [enemy_x],20
  mov dword [enemy_y],20
- mov byte [enemy_target_x],40
- mov byte [enemy_target_y],30
- mov dword [enemy_move_intervals],50
- mov dword [enemy_move_timers],0
- mov dword [random_state],1
- call update_enemies
- cmp dword [enemy_x],20
- ja .random_horizontal_moved
- check dword [enemy_x],21,'random movement selects horizontal axis'
-.random_horizontal_moved:
- mov eax,[enemy_x]
- cmp eax,23
- jbe .random_horizontal_in_range
- check eax,23,'horizontal random step stays within wave one limit'
-.random_horizontal_in_range:
- check dword [enemy_y],20,'horizontal movement preserves the other axis'
- call solo
- mov dword [enemy_x],20
- mov dword [enemy_y],20
- mov byte [enemy_target_x],40
- mov byte [enemy_target_y],30
- mov dword [enemy_move_intervals],50
- mov dword [enemy_move_timers],0
- mov dword [random_state],2
- call update_enemies
- check dword [enemy_x],20,'vertical movement preserves the other axis'
- mov eax,[enemy_y]
- cmp eax,20
- ja .random_vertical_moved
- check eax,21,'random movement selects vertical axis'
-.random_vertical_moved:
- cmp eax,22
- jbe .random_vertical_in_range
- check eax,22,'vertical random step stays within wave one limit'
-.random_vertical_in_range:
- ; Both edges, and no repeated descent on the following horizontal tick.
- call solo
- mov dword [enemies+E_X],RIGHT-ENEMY_WIDTH
- mov dword [enemies+E_Y],3
- call move_enemies
- check dword [direction],-1,'right edge reverses'
- check dword [enemies+E_X],RIGHT-ENEMY_WIDTH,'edge tick no horizontal step'
- check dword [enemies+E_Y],4,'edge descent once'
- call move_enemies
- check dword [enemies+E_X],RIGHT-ENEMY_WIDTH-1,'next tick moves away'
- check dword [enemies+E_Y],4,'no repeated descent'
- mov dword [enemies+E_X],0
- call move_enemies
- check dword [direction],1,'left edge reverses'
- check dword [enemies+E_X],0,'no x underflow'
- check dword [enemies+E_Y],5,'left edge descent'
- ; A dead rightmost slot must not influence movement.
- mov dword [enemies+E_X],10
- mov dword [enemies+E_SIZE+E_X],10000
- call move_enemies
- check dword [enemies+E_X],11,'dead bounds ignored'
- ; The burger's own source width controls its right limit.
- mov dword [enemies+E_TYPE],2
- mov dword [enemies+E_X],RIGHT-14
- call move_enemies
- check dword [enemies+E_X],RIGHT-14,'actual type width used'
- check dword [direction],-1,'wide sprite edge turn'
- ; Breach is atomic and latched for the full-height source artwork.
- mov dword [enemies+E_TYPE],0
- mov dword [enemies+E_X],0
- mov dword [enemies+E_Y],BOTTOM-ENEMY_HEIGHT
- call move_enemies
- check dword [enemies+E_Y],BOTTOM-ENEMY_HEIGHT,'breach keeps legal y'
- check dword [enemy_events],EV_BREACH,'breach event'
- call move_enemies
- check dword [enemy_events],EV_BREACH,'one latched breach'
+ call verify_random_wandering
  ; HP, invalid indices, nonpositive damage, one death and reward.
  call solo
  mov dword [enemies+E_TYPE],2
@@ -316,45 +265,36 @@ tests_start:
  call spawn_enemy_projectile
  add esp,8
  check eax,0,'negative projectile rejected'
- ; Randomized shooter selection blocks upper slots behind living allies.
+ ; Shooters can fire from their randomized map positions.
  call initialize_game
- mov ebx,5
+ mov ebx,3
  call fire_enemy_slot
- check dword [shots+S_X],13,'stage 1 hotdog shoots from the left lane'
+ check dword [shots+S_ACTIVE],1,'first randomized attacker fires'
+ mov esi,shots
+ call test_shot_matches_attacker
+ setc al
+ check al,0,'first shot starts at an active attacker'
  call clear_projectiles
- mov ebx,7
+ mov ebx,4
  call fire_enemy_slot
- check dword [shots+S_X],65,'stage 1 pizza shoots from the middle lane'
+ check dword [shots+S_ACTIVE],1,'second randomized attacker fires'
+ mov esi,shots
+ call test_shot_matches_attacker
+ setc al
+ check al,0,'second shot starts at an active attacker'
  call clear_projectiles
  call fire_enemy
  check dword [shots+S_ACTIVE],1,'fire selection creates a hostile shot'
- mov eax,[shots+S_X]
- cmp eax,13
- je .first_bottom_shooter_ok
- cmp eax,65
- jne .first_check_failure
-.first_bottom_shooter_ok:
- inc dword [test_count]
- jmp .first_shooter_done
-.first_check_failure:
- check eax,13,'first random shooter is an unblocked bottom enemy'
-.first_shooter_done:
- mov eax,ENEMY_REAR_TOP+((ENEMY_REAR_BAND_HEIGHT-SOURCE_ART_HEIGHT)/2)+SOURCE_ART_HEIGHT
- check dword [shots+S_Y],eax,'shot starts below full-size source sprite'
+ mov esi,shots
+ call test_shot_matches_attacker
+ setc al
+ check al,0,'random shot matches an active attacker'
  call fire_enemy
- mov eax,[shots+S_SIZE+S_X]
- cmp eax,13
- je .second_bottom_shooter_ok
- cmp eax,65
- jne .second_check_failure
-.second_bottom_shooter_ok:
- inc dword [test_count]
- jmp .second_shooter_done
-.second_check_failure:
- check eax,13,'second random shooter is an unblocked bottom enemy'
-.second_shooter_done:
- mov eax,ENEMY_REAR_TOP+((ENEMY_REAR_BAND_HEIGHT-SOURCE_ART_HEIGHT)/2)+SOURCE_ART_HEIGHT
- check dword [shots+S_SIZE+S_Y],eax,'second bottom shot starts below full-size source sprite'
+ check dword [shots+S_SIZE+S_ACTIVE],1,'second random attacker can fire'
+ mov esi,shots+S_SIZE
+ call test_shot_matches_attacker
+ setc al
+ check al,0,'second random shot matches an active attacker'
  ; Single life loss when multiple sources coincide; preserve survivors HP.
  call solo
  mov dword [enemies+E_X],TEST_PLAYER_X
@@ -398,22 +338,20 @@ tests_start:
  check byte [player_lives],2,'simultaneous hit loses one life'
  call simulate_tick
  check dword [current_wave],2,'deferred clear progresses'
- check dword [alive_count],10,'new formation initialized'
- ; Boss mechanics, actual width, no descending, full HP and final victory.
+ check dword [alive_count],10,'new wave enemies initialized'
+ ; Boss health, fast attacks, and final victory.
  mov dword [current_wave],5
  call initialize_enemies
  check dword [alive_count],1,'boss alone'
  check dword [boss_mode],1,'boss encounter'
  check dword [enemies+E_HP],20,'boss health'
- check dword [attack_min_interval],1200,'boss fires faster than the final regular wave'
- check dword [enemy_move_min_interval],90,'boss movement is the fastest stage profile'
- check dword [enemy_shot_step_ms],90,'boss shots use the fastest hostile-shot profile'
+ check dword [attack_min_interval],1000,'boss fires faster than the final regular wave'
+ check dword [enemy_move_min_interval],50,'boss movement is the fastest stage profile'
+ check dword [enemy_shot_step_ms],35,'boss shots use the fastest hostile-shot profile'
  mov dword [enemies+E_X],RIGHT-15
- call move_enemies
- check dword [direction],-1,'boss wall reversal'
- check dword [enemies+E_Y],TOP,'boss no descent'
+ mov dword [enemies+E_Y],TOP
  call fire_enemy
- check dword [shots+S_X],RIGHT-9,'boss shot centered'
+ check dword [shots+S_X],RIGHT-8,'boss shot centered'
  check dword [shots+S_Y],TOP+ENEMY_HEIGHT,'boss shot below full-size art'
  push dword 20
  push dword 0
@@ -551,14 +489,18 @@ tests_start:
  mov byte [difficulty_level],DIFFICULTY_NORMAL
  call initialize_game
  call verify_enemy_art_collection
- call initialize_game
+ call solo
+ mov dword [enemy_x],0
+ mov dword [enemy_y],5
+ mov dword [enemies+E_SX],0
+ mov dword [enemies+E_SY],5
  call draw_game
- check word [back_buffer+(TEST_CUPCAKE_Y*SCREEN_WIDTH+10)*2],0D23h,'full-size cupcake art drawn with color'
+ check word [back_buffer+(5*SCREEN_WIDTH+7)*2],0D23h,'full-size cupcake art drawn at an arbitrary position'
  check word [back_buffer+(TEST_PLAYER_Y*SCREEN_WIDTH+TEST_PLAYER_X+2)*2],0F23h,'chef drawn in player area'
  push es
  mov ax,0B800h
  mov es,ax
- mov ax,[es:(TEST_CUPCAKE_Y*SCREEN_WIDTH+10)*2]
+ mov ax,[es:(5*SCREEN_WIDTH+7)*2]
  pop es
  check ax,0D23h,'VGA memory contains rendered cupcake artwork'
  mov byte [pickup_active],1
@@ -598,7 +540,12 @@ tests_start:
  mov dword [current_wave],5
  call initialize_enemies
  call draw_game
- check word [back_buffer+(TOP*SCREEN_WIDTH+34)*2],0F23h,'full-size Ratatouille art renders'
+ mov eax,[enemies+E_Y]
+ imul eax,SCREEN_WIDTH
+ add eax,[enemies+E_X]
+ shl eax,1
+ mov dx,[back_buffer+eax]
+ check dx,0F23h,'full-size Ratatouille art renders at its randomized position'
  call show_game_over
  check word [back_buffer+(RESULT_TITLE_ROW*SCREEN_WIDTH+TEST_GAMEOVER_TITLE_X)*2],0C47h,'game over title is centered'
  check word [back_buffer+(RESULT_ART_ROW*SCREEN_WIDTH+36)*2],0F23h,'game over previews Ratatouille art'
@@ -652,6 +599,11 @@ tests_start:
 .stress_sim:
  call simulate_tick
  call assert_invariants
+ mov eax,[stress_remaining]
+ test al,63
+ jnz .spacing_checked
+ call assert_enemy_spacing
+.spacing_checked:
  dec dword [stress_remaining]
  jnz .stress
  mov ax,3
@@ -714,44 +666,209 @@ verify_enemy_art_collection:
  popad
  ret
 
-; Return one bit per lane containing an active shooter in the current wave.
-get_test_shooter_lane_mask:
+; Return the number of active attackers in EAX.
+get_test_shooter_count:
  push ebx
- push ecx
- push edx
- push esi
- push edi
- push ebp
+ xor eax,eax
+ xor ebx,ebx
+.loop:
+ cmp byte [enemy_shoot_enabled+ebx],0
+ je .skip
+ inc eax
+.skip:
+ inc ebx
+ cmp ebx,MAX_ENEMIES
+ jb .loop
+ pop ebx
+ ret
+
+; Repeated deterministic vectors must explore both directions on both axes.
+verify_random_wandering:
+ pushad
+ mov esi,enemies
+ mov ebx,0
+ mov edi,1
+ xor ebp,ebp
+.sample:
+ mov dword [enemy_x],60
+ mov dword [enemy_y],30
+ mov [random_state],edi
+ call random_enemy_step
+ mov eax,[enemy_x]
+ cmp eax,60
+ jb .x_negative
+ ja .x_positive
+ jmp .y_check
+.x_negative:
+ or ebp,1
+ jmp .y_check
+.x_positive:
+ or ebp,2
+.y_check:
+ mov eax,[enemy_y]
+ cmp eax,30
+ jb .y_negative
+ ja .y_positive
+ jmp .next
+.y_negative:
+ or ebp,4
+ jmp .next
+.y_positive:
+ or ebp,8
+.next:
+ inc edi
+ cmp edi,129
+ jb .sample
+ check ebp,15,'random wandering moves both ways on each axis'
+
+ ; Test repeated attempts beside the Chef boundary; a valid step never crosses it.
+ mov ebx,0
+ mov edi,1
+.safe_line:
+ mov dword [enemy_x],60
+ mov dword [enemy_y],ENEMY_BREACH_LINE-ENEMY_HEIGHT-1
+ mov [random_state],edi
+ call random_enemy_step
+ mov eax,[enemy_y]
+ mov edx,[enemies+E_TYPE]
+ imul edx,T_SIZE
+ add eax,[type_table+edx+T_H]
+ cmp eax,ENEMY_BREACH_LINE
+ jb .safe
+ check eax,ENEMY_BREACH_LINE-1,'random movement stays above the Chef safe line'
+.safe:
+ inc edi
+ cmp edi,33
+ jb .safe_line
+ popad
+ ret
+
+; Verify randomized spawn bounds, separation, and coverage for a fixed seed.
+verify_enemy_scatter:
+ pushad
  xor ebp,ebp
  xor edi,edi
-.loop:
- mov eax,edi
+ xor ebx,ebx
+.enemy:
+ mov eax,ebx
  imul eax,E_SIZE
  add eax,enemies
  mov esi,eax
+ check dword [esi+E_ACTIVE],1,'random spawn initializes every enemy'
+ mov eax,[esi+E_X]
+ mov [enemy_candidate_x],al
+ mov eax,[esi+E_Y]
+ mov [enemy_candidate_y],al
+ call enemy_position_is_clear
+ setc al
+ check al,0,'random spawn keeps enemies separated'
+
  mov eax,[esi+E_TYPE]
  imul eax,T_SIZE
- cmp dword [type_table+eax+T_SHOOT],0
+ mov edx,[esi+E_Y]
+ add edx,[type_table+eax+T_H]
+ cmp edx,ENEMY_BREACH_LINE
+ jb .safe_y
+ check edx,ENEMY_BREACH_LINE-1,'spawn stays above the Chef safety line'
+.safe_y:
+ mov edx,[esi+E_X]
+ mov ecx,[type_table+eax+T_W]
+ shr ecx,1
+ add edx,ecx
+ cmp edx,SCREEN_WIDTH/3
+ jb .left
+ cmp edx,(SCREEN_WIDTH*2)/3
+ jb .middle
+ or ebp,4
+ jmp .vertical
+.left:
+ or ebp,1
+ jmp .vertical
+.middle:
+ or ebp,2
+.vertical:
+ mov eax,[esi+E_Y]
+ cmp eax,TOP+17
+ jb .upper
+ cmp eax,TOP+34
+ jb .middle_y
+ or edi,4
+ jmp .next
+.upper:
+ or edi,1
+ jmp .next
+.middle_y:
+ or edi,2
+.next:
+ inc ebx
+ cmp ebx,MAX_ENEMIES
+ jb .enemy
+ check ebp,7,'enemy starts cover the full playfield width'
+ check edi,7,'enemy starts cover the safe playfield height'
+ popad
+ ret
+
+; Sample every active pair during the campaign stress loop.
+assert_enemy_spacing:
+ pushad
+ xor ebx,ebx
+.loop:
+ mov eax,ebx
+ imul eax,E_SIZE
+ add eax,enemies
+ mov esi,eax
+ cmp dword [esi+E_ACTIVE],0
  je .next
+ mov eax,[esi+E_X]
+ mov [enemy_candidate_x],al
+ mov eax,[esi+E_Y]
+ mov [enemy_candidate_y],al
+ call enemy_position_is_clear
+ setc al
+ check al,0,'roaming enemies maintain their clearance'
+.next:
+ inc ebx
+ cmp ebx,MAX_ENEMIES
+ jb .loop
+ popad
+ ret
+
+; CF=0 when a shot's coordinates match an active enemy shooter.
+test_shot_matches_attacker:
+ pushad
+ mov ebp,esi
+ xor edi,edi
+.enemy:
  mov eax,edi
- xor edx,edx
- mov ecx,ENEMY_LANE_COUNT
- div ecx
- mov ebx,1
- mov cl,dl
- shl ebx,cl
- or ebp,ebx
+ imul eax,E_SIZE
+ add eax,enemies
+ cmp dword [eax+E_ACTIVE],0
+ je .next
+ cmp byte [enemy_shoot_enabled+edi],0
+ je .next
+ mov edx,[eax+E_TYPE]
+ imul edx,T_SIZE
+ mov ecx,[eax+E_X]
+ mov ebx,[type_table+edx+T_W]
+ shr ebx,1
+ add ecx,ebx
+ sub ecx,HOSTILE_SHOT_WIDTH/2
+ cmp ecx,[ebp+S_X]
+ jne .next
+ mov ecx,[eax+E_Y]
+ add ecx,[type_table+edx+T_H]
+ cmp ecx,[ebp+S_Y]
+ je .found
 .next:
  inc edi
  cmp edi,MAX_ENEMIES
- jb .loop
- mov eax,ebp
- pop ebp
- pop edi
- pop esi
- pop edx
- pop ecx
- pop ebx
+ jb .enemy
+ popad
+ stc
+ ret
+.found:
+ popad
+ clc
  ret
 
 ; Stress checks independently count living slots and verify geometry/HP/state.
@@ -780,7 +897,7 @@ assert_invariants:
  cmp edx,TOP
  jl .bad
  add edx,[type_table+eax+T_H]
- cmp edx,BOTTOM
+ cmp edx,ENEMY_BREACH_LINE
  jg .bad
  cmp dword [esi+E_HP],0
  jle .bad

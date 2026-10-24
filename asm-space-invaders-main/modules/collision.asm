@@ -150,7 +150,7 @@ check_hostile_hits:
  ret
 
 
-; Latch an occupied cell entering the footer, or an atomic movement breach.
+; Latch an enemy reaching the safe line above the Chef.
 check_enemy_bottom:
  pushad
  cmp byte [game_state],PLAYING
@@ -166,8 +166,8 @@ check_enemy_bottom:
  jz .next
  mov ecx,[eax+E_Y]
  add ecx,[edx+T_H]
- cmp ecx,BOTTOM
- jg .breach
+ cmp ecx,ENEMY_BREACH_LINE
+ jae .breach
 .next:
  inc ebx
  cmp ebx,MAX_ENEMIES

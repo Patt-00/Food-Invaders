@@ -216,7 +216,7 @@ start:
     mov byte [player_x], 60
     mov byte [player_y], 60
     mov dword [shots+S_ACTIVE], 1
-    mov dword [shots+S_X], 60+PLAYER_WIDTH-HOSTILE_SHOT_WIDTH+1
+    mov dword [shots+S_X], 60+PLAYER_WIDTH-HOSTILE_SHOT_WIDTH
     mov dword [shots+S_Y], 64
     checked_call check_hostile_hits
     expect_word loss_pending, 1, 'hostile shot hits the Chef outer edge'
@@ -237,47 +237,6 @@ start:
     expect_word loss_pending, 0, 'hostile shot touching the top edge misses'
     expect_word shots+S_ACTIVE, 1, 'top-edge miss preserves hostile shot'
 
-    ; Each five-column lane advances its front/rear pair on its own timer.
-    call reset_state
-    mov dword [enemy_lane_drop_timers], 1234
-    mov dword [enemy_lane_drop_timers+4*4], 5678
-    mov byte [enemy_lane_descent], 12
-    mov byte [enemy_lane_descent+4], 34
-    call initialize_enemies
-    expect_word enemy_lane_drop_timers, 0, 'new formation clears first lane timer'
-    expect_word enemy_lane_drop_timers+4*4, 0, 'new formation clears last lane timer'
-    expect_byte enemy_lane_descent, 0, 'new formation resets first lane offset'
-    expect_byte enemy_lane_descent+4, 0, 'new formation resets last lane offset'
-    mov dword [enemy_move_intervals], 1000
-    mov dword [enemy_move_intervals+5*4], 1000
-    mov dword [enemy_lane_drop_timers], 0
-    mov dword [enemy_lane_drop_intervals], 50
-    mov byte [enemy_lane_descent], 0
-    checked_call update_enemies
-    expect_byte enemy_lane_descent, 1, 'expired lane timer advances its descent offset'
-    expect_word enemies+E_Y, ENEMY_FRONT_TOP+1, 'front enemy descends with its lane'
-    expect_word enemies+5*E_SIZE+E_Y, ENEMY_REAR_TOP+1, 'rear enemy keeps its lane spacing'
-    expect_word enemies+E_SIZE+E_Y, ENEMY_FRONT_TOP, 'neighboring lane keeps its own timer'
-
-    ; A final lane drop reaches the footer through the live simulation path.
-    call reset_state
-    call initialize_enemies
-    mov dword [enemy_move_intervals], 1000
-    mov dword [enemy_move_intervals+5*4], 1000
-    mov byte [enemy_lane_descent], 47
-    mov dword [enemies+E_Y], ENEMY_FRONT_TOP+47
-    mov dword [enemies+5*E_SIZE+E_Y], ENEMY_REAR_TOP+47
-    mov byte [enemy_target_y], ENEMY_FRONT_TOP+47
-    mov byte [enemy_target_y+5], ENEMY_REAR_TOP+47
-    mov dword [enemy_lane_drop_timers], 0
-    mov dword [enemy_lane_drop_intervals], 50
-    checked_call simulate_tick
-    expect_byte player_lives, 2, 'live lane breach loses exactly one life'
-    expect_byte enemy_lane_descent, 0, 'life loss resets lane descent state'
-    expect_byte enemy_y, ENEMY_FRONT_TOP, 'life loss restores front enemy spawn'
-    expect_byte enemies+5*E_SIZE+E_Y, ENEMY_REAR_TOP, 'life loss restores rear enemy spawn'
-    expect_word enemy_events, 0, 'life loss clears lane breach event'
-
     ; Life exhaustion, including an already-zero life counter, never wraps.
     call reset_state
     mov byte [enemy_x], 60
@@ -297,15 +256,15 @@ start:
     checked_call resolve_game_events
     expect_byte game_state, GAME_OVER, 'zero lives on contact ends play'
 
-    ; Boundary detection uses the lowest occupied row, not enemy top row.
+    ; Breach detection stops enemies at the safe line above the Chef.
     call reset_state
-    mov byte [enemy_y], SCREEN_HEIGHT - ENEMY_HEIGHT - 1
+    mov byte [enemy_y], ENEMY_BREACH_LINE - ENEMY_HEIGHT - 1
     checked_call check_enemy_bottom
-    expect_byte enemy_alive, 1, 'enemy above last row has not breached'
-    expect_byte player_lives, 3, 'no premature breach damage'
+    expect_byte enemy_alive, 1, 'enemy above the safe line has not breached'
+    expect_byte player_lives, 3, 'no damage before the safe line'
     inc byte [enemy_y]
     checked_call check_enemy_bottom
-    expect_word loss_pending, 1, 'reaching footer queues breach damage'
+    expect_word loss_pending, 1, 'reaching the safe line queues breach damage'
     checked_call resolve_game_events
     expect_byte enemy_alive, 1, 'breach preserves surviving enemy'
     expect_byte enemy_y, 30, 'breach restores spawn position'
@@ -439,6 +398,13 @@ reset_state:
     xor eax, eax
     mov ecx, MAX_ENEMIES*E_SIZE/4
     a32 rep stosd
+    mov edi, enemy_shoot_enabled
+    mov ecx, MAX_ENEMIES
+    a32 rep stosb
+    mov edi, enemy_move_timers
+    mov ecx, MAX_ENEMIES*4
+    a32 rep stosd
+    mov byte [enemy_position_clearance], ENEMY_CLEARANCE
     mov byte [player_x], 60
     mov byte [player_y], 80
     mov dword [enemy_x], 40

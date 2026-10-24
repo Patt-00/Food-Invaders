@@ -10,7 +10,7 @@ Install NASM and DOSBox-X, then run this script from the repository root:
 ./run-linux.sh
 ```
 
-The script builds `INVADERS.COM` from `main.asm` and launches the game. It uses a native `dosbox-x` command when available, or the DOSBox-X Flatpak when installed.
+The script builds `INVADERS.COM` from `main.asm` and launches the game. It uses a native `dosbox-x` command when available, or the DOSBox-X Flatpak when installed. The preset uses `cycles=max`, which can increase CPU use, heat, and battery drain on mobile devices.
 
 ## Run on Termux
 
@@ -34,12 +34,8 @@ The game uses DOSBox-X's SVGA S3 mode, so a plain text-only Termux session is no
 | R | Restart after a result screen |
 | Q or Escape | Quit |
 
-The four regular waves use distinct formations and spread shooters across the left, middle, and right lanes. Enemy movement and fire speed up by wave, followed by a 20 HP Ratatouille boss.
-
-## Gameplay reference
-
-Food Invaders uses the Space Invaders game loop as its premise. For a playable text-mode example, see [doctorfree/ninvaders at revision `dc38ab8`](https://github.com/doctorfree/ninvaders/tree/dc38ab8db9ecdb5f69fbd3b3deb42e253d6f08c3). It uses C and ncurses, and its CMake build ran in Linux and Termux on 2026-10-24. This project keeps its own NASM and DOSBox-X implementation.
+The four regular waves place enemies at random positions across the playfield. Each enemy then takes independent random steps on both axes, avoids the other enemies, and stays above a safety line eight rows above the Chef. Later waves add shooters and increase movement and bullet speed. A 20 HP Ratatouille boss follows the fourth wave. Enemy bullets use a single text cell and move once every 50 to 80 milliseconds, depending on the wave; the 50 ms game tick sets the fastest rate.
 
 ## Project details
 
-The game source, manual build steps, controls, module overview, and regression-test instructions are in [asm-space-invaders-main/README.md](asm-space-invaders-main/README.md). Recorded DOSBox-X results are available for the [normal CPU core](asm-space-invaders-main/tests/integrated-normal-result.txt) and [dynamic CPU core](asm-space-invaders-main/tests/integrated-dynamic-result.txt).
+The [game README](asm-space-invaders-main/README.md) covers wave behavior, the playable text-mode reference, module roles, and manual test commands. Recorded DOSBox-X results are available for the [normal CPU core](asm-space-invaders-main/tests/integrated-normal-result.txt) and [dynamic CPU core](asm-space-invaders-main/tests/integrated-dynamic-result.txt).

@@ -407,16 +407,7 @@ draw_hostile_bullets:
  je .next
  mov eax,[esi+S_X]
  mov edx,[esi+S_Y]
- mov bx,0CDBh                ; 2x2 bright-red block, visible across the large arena.
- call draw_cell
- inc eax
- call draw_cell
- mov eax,[esi+S_X]
- mov edx,[esi+S_Y]
- inc edx
- mov bx,0CDBh
- call draw_cell
- inc eax
+ mov bx,0CDBh                ; One-cell bright-red marker.
  call draw_cell
 .next:
  add esi,S_SIZE

@@ -10,8 +10,8 @@ SOURCE_ART_HEIGHT equ 16
 WEAPON_WIDTH    equ SOURCE_ART_WIDTH
 WEAPON_HEIGHT   equ SOURCE_ART_HEIGHT
 BULLET_SPEED    equ 2        ; Keeps a shot in the shorter viewport through its cooldown.
-HOSTILE_SHOT_WIDTH equ 2
-HOSTILE_SHOT_HEIGHT equ 2
+HOSTILE_SHOT_WIDTH equ 1
+HOSTILE_SHOT_HEIGHT equ 1
 PLAYER_MOVE_STEP equ 3       ; One key repeat moves far enough to cross the wide playfield.
 PLAYER_BOOST_MOVE_STEP equ 5
 PLAYER_HITBOX_X equ 0
@@ -54,14 +54,14 @@ PICKUP_STEP_TICKS equ 4      ; A falling pickup moves once every 200 ms.
 PICKUP_WIDTH equ 14
 PICKUP_HEIGHT equ 18
 
-ENEMY_MOVE_BASE_MIN_MS equ 180
+ENEMY_MOVE_BASE_MIN_MS equ 120
 ENEMY_MOVE_BASE_RANGE_MS equ 241
-ENEMY_MOVE_STAGE_ACCEL_MS equ 25
+ENEMY_MOVE_STAGE_ACCEL_MS equ 20
 ENEMY_ATTACK_BASE_MIN_MS equ 2600
 ENEMY_ATTACK_BASE_RANGE_MS equ 2401
 ENEMY_ATTACK_STAGE_ACCEL_MS equ 350
-HOSTILE_SHOT_BASE_MS equ 170
-HOSTILE_SHOT_STAGE_ACCEL_MS equ 20
+HOSTILE_SHOT_BASE_MS equ 80
+HOSTILE_SHOT_STAGE_ACCEL_MS equ 15
 
 %define DIFFICULTY_EASY 1
 %define DIFFICULTY_NORMAL 2
@@ -76,47 +76,30 @@ HOSTILE_SHOT_STAGE_ACCEL_MS equ 20
 
 ENEMY_WIDTH     equ 22       ; Widest source design: the cupcake.
 ENEMY_HEIGHT    equ 16       ; Tallest food enemy source design.
-ENEMY_LANE_COUNT equ 5
-ENEMY_LANE_WIDTH equ (SCREEN_WIDTH / ENEMY_LANE_COUNT)
-ENEMY_FRONT_TOP equ 5
-ENEMY_FRONT_BAND_HEIGHT equ 17
-ENEMY_REAR_TOP equ 24
-ENEMY_REAR_BAND_HEIGHT equ 17
-ENEMY_CHEF_GAP equ (SCREEN_HEIGHT - PLAYER_HEIGHT - 1) - (ENEMY_REAR_TOP + ENEMY_REAR_BAND_HEIGHT)
-FORMATION_MAX_OFFSET equ 3
-ENEMY_LANE_DROP_MIN_MS equ 4000
-ENEMY_LANE_DROP_RANGE_MS equ 4001
-ENEMY_LANE_DROP_STAGE_ACCEL_MS equ 400
-BOSS_MIN_Y equ 6
-BOSS_Y_RANGE equ 21
+MENU_ENEMY_PREVIEW_COUNT equ 5
+MENU_ENEMY_PREVIEW_WIDTH equ (SCREEN_WIDTH / MENU_ENEMY_PREVIEW_COUNT)
+; Enemies roam the full field but stop above the Chef's safe area.
+ENEMY_CHEF_SAFE_GAP equ 8
+ENEMY_BREACH_LINE equ (SCREEN_HEIGHT - PLAYER_HEIGHT - 1 - ENEMY_CHEF_SAFE_GAP)
+ENEMY_CLEARANCE equ 2
+ENEMY_RANDOM_STEP_TRIES equ 12
+enemy_move_step_x_by_wave db 4,6,8,10
+enemy_move_step_y_by_wave db 2,3,4,5
 
-; Four regular waves use different enemy orders and vertical lane shapes.
+; Four regular waves use different enemy orders and attacker counts.
 WAVE_REGULAR_COUNT equ 4
-formation_type_map:
+wave_enemy_type_map:
     db 0,1,2,3,4, 3,2,4,0,1
     db 1,0,3,2,4, 4,3,1,0,2
     db 4,0,3,1,2, 1,4,2,0,3
     db 2,4,0,3,1, 3,2,4,0,1
-formation_lane_offsets:
-    db 0,0,0,0,0
-    db 0,1,2,1,0
-    db 3,1,0,1,3
-    db 0,3,0,3,0
+wave_extra_shooter_masks dd 0,1,0Ah,15h
 
-%if ENEMY_LANE_WIDTH < ENEMY_WIDTH
-    %error "Enemy lanes must fit the widest ASCII design"
+%if ENEMY_BREACH_LINE <= PLAYFIELD_TOP + 1 + ENEMY_HEIGHT
+    %error "Enemies need a safe movement area above the Chef"
 %endif
-%if ENEMY_FRONT_TOP + ENEMY_FRONT_BAND_HEIGHT > ENEMY_REAR_TOP
-    %error "Regular enemy bands must not overlap"
-%endif
-%if ENEMY_REAR_TOP + ENEMY_REAR_BAND_HEIGHT + FORMATION_MAX_OFFSET > SCREEN_HEIGHT - PLAYER_HEIGHT - 1 - WEAPON_HEIGHT
-    %error "Rear enemies must leave room for a full-size player shot"
-%endif
-%if ENEMY_CHEF_GAP - FORMATION_MAX_OFFSET < 20
-    %error "Rear enemies must leave at least 20 rows before the Chef"
-%endif
-%if ENEMY_LANE_DROP_MIN_MS <= ENEMY_LANE_DROP_STAGE_ACCEL_MS * 3
-    %error "Regular enemies must keep a positive lane-drop interval"
+%if ENEMY_CHEF_SAFE_GAP < 1
+    %error "Enemies must stop above the Chef's area"
 %endif
 %if ENEMY_MOVE_BASE_MIN_MS <= ENEMY_MOVE_STAGE_ACCEL_MS * 3 || ENEMY_MOVE_BASE_RANGE_MS <= ENEMY_MOVE_STAGE_ACCEL_MS * 3
     %error "Regular enemy movement intervals must stay positive"
@@ -203,15 +186,8 @@ pickup_move_timer db 0
 shot_timer dd 0
 alive_count dd 0
 boss_mode dd 0
-direction dd 1
-move_timer dd 0
-attack_timer dd 0
-move_interval dd 300
-attack_interval dd 1200
 attack_min_interval dd 1800
 attack_interval_range dd 1800
-enemy_lane_drop_min_interval dd ENEMY_LANE_DROP_MIN_MS
-enemy_lane_drop_interval_range dd ENEMY_LANE_DROP_RANGE_MS
 enemy_move_min_interval dd ENEMY_MOVE_BASE_MIN_MS
 enemy_move_interval_range dd ENEMY_MOVE_BASE_RANGE_MS
 enemy_shot_step_ms dd HOSTILE_SHOT_BASE_MS
@@ -222,15 +198,17 @@ loss_pending dd 0
 completion_sent dd 0
 enemies times MAX_ENEMIES*E_SIZE db 0
 shots times MAX_SHOTS*S_SIZE db 0
+enemy_shoot_enabled times MAX_ENEMIES db 0
 enemy_move_timers times MAX_ENEMIES dd 0
 enemy_move_intervals times MAX_ENEMIES dd 0
 enemy_fire_timers times MAX_ENEMIES dd 0
 enemy_fire_intervals times MAX_ENEMIES dd 0
-enemy_target_x times MAX_ENEMIES db 0
-enemy_target_y times MAX_ENEMIES db 0
-enemy_lane_drop_timers times ENEMY_LANE_COUNT dd 0
-enemy_lane_drop_intervals times ENEMY_LANE_COUNT dd 0
-enemy_lane_descent times ENEMY_LANE_COUNT db 0
+enemy_candidate_x db 0
+enemy_candidate_y db 0
+enemy_step_dx db 0
+enemy_step_dy db 0
+enemy_position_attempts dd 0
+enemy_position_clearance db ENEMY_CLEARANCE
 random_state dd 0x6D2B79F5
 
 invulnerable dd 0

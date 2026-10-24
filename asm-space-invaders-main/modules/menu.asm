@@ -31,7 +31,7 @@ menu_quit_text db 'Q OR ESC: QUIT',0
 controls_text db 'A/D OR ARROWS: MOVE',0
 weapons_text db 'SPACE: CLEAVER     X: ROLLING PIN',0
 powerup_text db 'CATCH A FALLING FIREBALL FOR A TEMPORARY BOOST',0
-details_text db 'HOTDOGS AND PIZZAS SHOOT; BURGER AND PIZZA TAKE TWO CLEAVER HITS',0
+details_text db 'ENEMIES ROAM THE MAP; MORE SHOOTERS JOIN EACH WAVE',0
 boss_text db 'CLEAR FOUR STAGES, THEN DEFEAT RATATOUILLE (20 HP)',0
 over_hint_text db 'R/SPACE: restart  1-3: difficulty  Q/ESC: quit',0
 difficulty_text db 'DIFFICULTY: 1 EASY  2 NORMAL  3 HARD',0
@@ -142,36 +142,36 @@ show_main_menu:
 ; Draw the existing full-size ASCII assets as a title-screen preview.
 draw_menu_preview:
  pushad
- ; Five regular invaders, centered in the same lanes used by gameplay.
- mov eax,(SCREEN_WIDTH-ENEMY_LANE_COUNT*ENEMY_LANE_WIDTH)/2 + (ENEMY_LANE_WIDTH-22)/2
+ ; Five regular invaders, spaced only for the title-screen art preview.
+ mov eax,(SCREEN_WIDTH-MENU_ENEMY_PREVIEW_COUNT*MENU_ENEMY_PREVIEW_WIDTH)/2 + (MENU_ENEMY_PREVIEW_WIDTH-22)/2
  mov edx,MENU_ENEMY_ROW
  mov esi,art_cupcake
  mov ecx,22
  mov ebp,16
  mov bl,0Dh
  call draw_rectangle_art
- mov eax,(SCREEN_WIDTH-ENEMY_LANE_COUNT*ENEMY_LANE_WIDTH)/2 + ENEMY_LANE_WIDTH + (ENEMY_LANE_WIDTH-14)/2
+ mov eax,(SCREEN_WIDTH-MENU_ENEMY_PREVIEW_COUNT*MENU_ENEMY_PREVIEW_WIDTH)/2 + MENU_ENEMY_PREVIEW_WIDTH + (MENU_ENEMY_PREVIEW_WIDTH-14)/2
  mov edx,MENU_ENEMY_ROW
  mov esi,art_fries
  mov ecx,14
  mov ebp,16
  mov bl,0Eh
  call draw_rectangle_art
- mov eax,(SCREEN_WIDTH-ENEMY_LANE_COUNT*ENEMY_LANE_WIDTH)/2 + ENEMY_LANE_WIDTH*2 + (ENEMY_LANE_WIDTH-14)/2
+ mov eax,(SCREEN_WIDTH-MENU_ENEMY_PREVIEW_COUNT*MENU_ENEMY_PREVIEW_WIDTH)/2 + MENU_ENEMY_PREVIEW_WIDTH*2 + (MENU_ENEMY_PREVIEW_WIDTH-14)/2
  mov edx,MENU_ENEMY_ROW+(16-11)/2
  mov esi,art_burger
  mov ecx,14
  mov ebp,11
  mov bl,0Bh
  call draw_rectangle_art
- mov eax,(SCREEN_WIDTH-ENEMY_LANE_COUNT*ENEMY_LANE_WIDTH)/2 + ENEMY_LANE_WIDTH*3 + (ENEMY_LANE_WIDTH-14)/2
+ mov eax,(SCREEN_WIDTH-MENU_ENEMY_PREVIEW_COUNT*MENU_ENEMY_PREVIEW_WIDTH)/2 + MENU_ENEMY_PREVIEW_WIDTH*3 + (MENU_ENEMY_PREVIEW_WIDTH-14)/2
  mov edx,MENU_ENEMY_ROW
  mov esi,art_hotdog
  mov ecx,14
  mov ebp,16
  mov bl,0Ch
  call draw_rectangle_art
- mov eax,(SCREEN_WIDTH-ENEMY_LANE_COUNT*ENEMY_LANE_WIDTH)/2 + ENEMY_LANE_WIDTH*4 + (ENEMY_LANE_WIDTH-14)/2
+ mov eax,(SCREEN_WIDTH-MENU_ENEMY_PREVIEW_COUNT*MENU_ENEMY_PREVIEW_WIDTH)/2 + MENU_ENEMY_PREVIEW_WIDTH*4 + (MENU_ENEMY_PREVIEW_WIDTH-14)/2
  mov edx,MENU_ENEMY_ROW
  mov esi,art_pizza
  mov ecx,14

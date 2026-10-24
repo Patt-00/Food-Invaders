@@ -54,14 +54,6 @@ random_attack_delay:
  call scale_difficulty_interval
  ret
 
-; random_enemy_lane_drop_interval(): scaled delay before one lane descends.
-random_enemy_lane_drop_interval:
- mov eax,[enemy_lane_drop_min_interval]
- mov ecx,[enemy_lane_drop_interval_range]
- call random_in_range
- call scale_difficulty_interval
- ret
-
 ; random_enemy_move_interval(): select this wave's movement delay and difficulty.
 random_enemy_move_interval:
  mov eax,[enemy_move_min_interval]
@@ -70,25 +62,199 @@ random_enemy_move_interval:
  call scale_difficulty_interval
  ret
 
-; get_formation_lane_offset(): EBX=enemy slot, EAX=wave-specific vertical offset.
-get_formation_lane_offset:
- push ecx
- push edx
- mov eax,ebx
- xor edx,edx
- mov ecx,ENEMY_LANE_COUNT
- div ecx
- mov ecx,[current_wave]
- dec ecx
- cmp ecx,WAVE_REGULAR_COUNT-1
- jbe .wave_ok
- mov ecx,WAVE_REGULAR_COUNT-1
-.wave_ok:
- imul ecx,ENEMY_LANE_COUNT
+; random_enemy_position(): ESI=enemy slot, store a full-field candidate position.
+random_enemy_position:
+ mov eax,[esi+E_TYPE]
+ imul eax,T_SIZE
+ mov ecx,SCREEN_WIDTH
+ sub ecx,[type_table+eax+T_W]
+ inc ecx
+ xor eax,eax
+ call random_in_range
+ mov [enemy_candidate_x],al
+
+ mov eax,[esi+E_TYPE]
+ imul eax,T_SIZE
+ mov ecx,ENEMY_BREACH_LINE
+ sub ecx,[type_table+eax+T_H]
+ sub ecx,TOP
+ inc ecx
+ mov eax,TOP
+ call random_in_range
+ mov [enemy_candidate_y],al
+ ret
+
+; Keep new sprites clear of every living enemy by the configured text-cell gap.
+; EBX is the slot being placed, ESI points to that enemy, CF=1 means blocked.
+enemy_position_is_clear:
+ pushad
+ xor edi,edi
+.check:
+ cmp edi,MAX_ENEMIES
+ jae .clear
+ cmp edi,ebx
+ je .next
+ mov eax,edi
+ imul eax,E_SIZE
+ add eax,enemies
+ cmp dword [eax+E_ACTIVE],0
+ je .next
+
+ ; Separate the horizontal rectangles before checking their vertical span.
+ mov ecx,[esi+E_TYPE]
+ imul ecx,T_SIZE
+ mov edx,[type_table+ecx+T_W]
+ movzx ecx,byte [enemy_candidate_x]
  add ecx,edx
- movzx eax,byte [formation_lane_offsets+ecx]
- pop edx
- pop ecx
+ movzx edx,byte [enemy_position_clearance]
+ add ecx,edx
+ cmp ecx,[eax+E_X]
+ jbe .next
+ mov ecx,[eax+E_TYPE]
+ imul ecx,T_SIZE
+ mov edx,[eax+E_X]
+ add edx,[type_table+ecx+T_W]
+ movzx ecx,byte [enemy_position_clearance]
+ add edx,ecx
+ movzx ecx,byte [enemy_candidate_x]
+ cmp edx,ecx
+ jbe .next
+
+ ; The horizontal rectangles overlap, so require a safe vertical gap.
+ mov ecx,[esi+E_TYPE]
+ imul ecx,T_SIZE
+ mov edx,[type_table+ecx+T_H]
+ movzx ecx,byte [enemy_candidate_y]
+ add ecx,edx
+ movzx edx,byte [enemy_position_clearance]
+ add ecx,edx
+ cmp ecx,[eax+E_Y]
+ jbe .next
+ mov ecx,[eax+E_TYPE]
+ imul ecx,T_SIZE
+ mov edx,[eax+E_Y]
+ add edx,[type_table+ecx+T_H]
+ movzx ecx,byte [enemy_position_clearance]
+ add edx,ecx
+ movzx ecx,byte [enemy_candidate_y]
+ cmp edx,ecx
+ jbe .next
+ jmp .blocked
+.next:
+ inc edi
+ jmp .check
+.clear:
+ popad
+ clc
+ ret
+.blocked:
+ popad
+ stc
+ ret
+
+; random_signed_step(): ECX=maximum distance, EAX=random signed step.
+random_signed_step:
+ push ebx
+ mov ebx,ecx
+ xor eax,eax
+ lea ecx,[ebx*2+1]
+ call random_in_range
+ sub eax,ebx
+ pop ebx
+ ret
+
+; random_enemy_step(): EBX=slot, ESI=enemy record; choose a safe random vector.
+; Each axis changes independently; blocked/out-of-bounds candidates are rerolled.
+random_enemy_step:
+ mov dword [enemy_position_attempts],0
+.try:
+ mov eax,[current_wave]
+ dec eax
+ cmp eax,WAVE_REGULAR_COUNT-1
+ jbe .x_profile
+ mov eax,WAVE_REGULAR_COUNT-1
+.x_profile:
+ movzx ecx,byte [enemy_move_step_x_by_wave+eax]
+ call random_signed_step
+ mov [enemy_step_dx],al
+
+ mov eax,[current_wave]
+ dec eax
+ cmp eax,WAVE_REGULAR_COUNT-1
+ jbe .y_profile
+ mov eax,WAVE_REGULAR_COUNT-1
+.y_profile:
+ movzx ecx,byte [enemy_move_step_y_by_wave+eax]
+ call random_signed_step
+ mov [enemy_step_dy],al
+ mov al,[enemy_step_dx]
+ or al,[enemy_step_dy]
+ jz .retry
+
+ movzx eax,byte [esi+E_X]
+ movsx edx,byte [enemy_step_dx]
+ add eax,edx
+ cmp eax,LEFT
+ jl .retry
+ mov [enemy_candidate_x],al
+ mov edx,[esi+E_TYPE]
+ imul edx,T_SIZE
+ add eax,[type_table+edx+T_W]
+ cmp eax,SCREEN_WIDTH
+ ja .retry
+
+ movzx eax,byte [esi+E_Y]
+ movsx edx,byte [enemy_step_dy]
+ add eax,edx
+ cmp eax,TOP
+ jl .retry
+ mov [enemy_candidate_y],al
+ mov edx,[esi+E_TYPE]
+ imul edx,T_SIZE
+ add eax,[type_table+edx+T_H]
+ cmp eax,ENEMY_BREACH_LINE
+ jae .retry
+ call enemy_position_is_clear
+ jc .retry
+
+ movzx eax,byte [enemy_candidate_x]
+ mov [esi+E_X],eax
+ movzx eax,byte [enemy_candidate_y]
+ mov [esi+E_Y],eax
+ clc
+ ret
+.retry:
+ inc dword [enemy_position_attempts]
+ cmp dword [enemy_position_attempts],ENEMY_RANDOM_STEP_TRIES
+ jb .try
+ stc
+ ret
+
+; place_enemy_randomly(): EBX=slot, ESI=enemy pointer; scatter without overlap.
+place_enemy_randomly:
+ mov byte [enemy_position_clearance],ENEMY_CLEARANCE
+.random_try:
+ call random_enemy_position
+ mov eax,[esi+E_TYPE]
+ imul eax,T_SIZE
+ movzx ecx,byte [enemy_candidate_y]
+ add ecx,[type_table+eax+T_H]
+ cmp ecx,ENEMY_BREACH_LINE
+ jae .retry_candidate
+ call enemy_position_is_clear
+ jnc .placed
+.retry_candidate:
+ ; Keep every spawn randomized; do not fall back to a fixed grid.
+ jmp .random_try
+.placed:
+ movzx eax,byte [enemy_candidate_x]
+ mov [esi+E_X],eax
+ mov [esi+E_SX],eax
+ movzx eax,byte [enemy_candidate_y]
+ mov [esi+E_Y],eax
+ mov [esi+E_SY],eax
+ mov dword [esi+E_ACTIVE],1
+ mov byte [enemy_position_clearance],ENEMY_CLEARANCE
  ret
 
 ; scale_difficulty_interval(): EAX=base delay; return adjusted delay.
@@ -116,82 +282,8 @@ scale_difficulty_interval:
 .done:
  ret
 
-; choose_enemy_target(): EBX=slot, ESI=enemy record; choose a spaced random destination.
-choose_enemy_target:
- push ecx
- push edx
- push edi
- push ebp
- cmp dword [boss_mode],0
- jne .boss_target
-
- ; Regular sprites stay within one of five columns and one of two vertical
- ; bands. Each column applies its own descent offset to both enemies, while
- ; the largest 22-cell design stays inside its lane.
- mov edx,[esi+E_TYPE]
- imul edx,T_SIZE
- mov edi,[type_table+edx+T_W]
- mov eax,ebx
- xor edx,edx
- mov ecx,ENEMY_LANE_COUNT
- div ecx
- movzx ebp,byte [enemy_lane_descent+edx]
- call get_formation_lane_offset
- add ebp,eax
- imul edx,ENEMY_LANE_WIDTH
- add edx,(SCREEN_WIDTH-ENEMY_LANE_COUNT*ENEMY_LANE_WIDTH)/2
- mov ecx,ENEMY_LANE_WIDTH
- sub ecx,edi
- inc ecx
- mov eax,edx
- call random_in_range
- mov [enemy_target_x+ebx],al
-
- mov eax,ebx
- xor edx,edx
- mov ecx,ENEMY_LANE_COUNT
- div ecx
- test eax,eax
- jnz .rear_band
- mov eax,ENEMY_FRONT_TOP
- add eax,ebp
- mov ecx,ENEMY_FRONT_BAND_HEIGHT
- jmp .target_y
-.rear_band:
- mov eax,ENEMY_REAR_TOP
- add eax,ebp
- mov ecx,ENEMY_REAR_BAND_HEIGHT
-.target_y:
- mov edx,[esi+E_TYPE]
- imul edx,T_SIZE
- sub ecx,[type_table+edx+T_H]
- inc ecx
- call random_in_range
- mov [enemy_target_y+ebx],al
- jmp .done
-
-.boss_target:
- mov edx,[esi+E_TYPE]
- imul edx,T_SIZE
- mov ecx,SCREEN_WIDTH
- sub ecx,[type_table+edx+T_W]
- inc ecx
- xor eax,eax
- call random_in_range
- mov [enemy_target_x+ebx],al
- mov eax,BOSS_MIN_Y
- mov ecx,BOSS_Y_RANGE
- call random_in_range
- mov [enemy_target_y+ebx],al
-.done:
- pop ebp
- pop edi
- pop edx
- pop ecx
- ret
-
-; initialize_enemies(): reads current_wave; clears encounter state/projectiles.
-; Creates two rows of five regular enemies or one boss on multiples of five.
+; initialize_enemies(): clears encounter state and scatters ten regular enemies.
+; Every fifth wave contains one boss.
 initialize_enemies:
  push ebx
  push esi
@@ -206,20 +298,14 @@ initialize_enemies:
  mov edi,enemy_move_timers
  mov ecx,MAX_ENEMIES*4
  a32 rep stosd
- ; Lane descent timers restart independently for each formation.
- mov edi,enemy_lane_drop_timers
- mov ecx,ENEMY_LANE_COUNT*2
- a32 rep stosd
- mov edi,enemy_lane_descent
- mov ecx,ENEMY_LANE_COUNT
+ mov edi,enemy_shoot_enabled
+ mov ecx,MAX_ENEMIES
  a32 rep stosb
  mov [enemy_events],eax
  mov [completion_sent],eax
- mov [move_timer],eax
- mov [attack_timer],eax
  mov [shooter_cursor],eax
  mov [boss_mode],eax
- mov dword [direction],1
+ mov byte [enemy_position_clearance],ENEMY_CLEARANCE
  call clear_projectiles
  mov eax,[current_wave]
  xor edx,edx
@@ -243,14 +329,6 @@ initialize_enemies:
  sub edx,eax
  mov [attack_interval_range],edx
  mov eax,ecx
- imul eax,ENEMY_LANE_DROP_STAGE_ACCEL_MS
- mov edx,ENEMY_LANE_DROP_MIN_MS
- sub edx,eax
- mov [enemy_lane_drop_min_interval],edx
- mov edx,ENEMY_LANE_DROP_RANGE_MS
- sub edx,eax
- mov [enemy_lane_drop_interval_range],edx
- mov eax,ecx
  imul eax,ENEMY_MOVE_STAGE_ACCEL_MS
  mov edx,ENEMY_MOVE_BASE_MIN_MS
  sub edx,eax
@@ -263,15 +341,7 @@ initialize_enemies:
  mov edx,HOSTILE_SHOT_BASE_MS
  sub edx,eax
  mov [enemy_shot_step_ms],edx
- mov dword [move_interval],300 ; Legacy field; live movement uses per-enemy random timers.
  mov dword [alive_count],MAX_ENEMIES
- xor ebx,ebx
-.lane_drop_intervals:
- call random_enemy_lane_drop_interval
- mov [enemy_lane_drop_intervals+ebx*4],eax
- inc ebx
- cmp ebx,ENEMY_LANE_COUNT
- jb .lane_drop_intervals
  xor ebx,ebx
  mov esi,enemies
 .regular:
@@ -283,56 +353,36 @@ initialize_enemies:
 .type_wave_ok:
  imul eax,MAX_ENEMIES
  add eax,ebx
- movzx eax,byte [formation_type_map+eax]
+ movzx eax,byte [wave_enemy_type_map+eax]
  mov [esi+E_TYPE],eax
  mov edx,eax
  imul edx,T_SIZE
  mov ecx,[type_table+edx+T_HP]
  mov [esi+E_HP],ecx
 
- ; Center each complete ASCII design inside its own 26-cell column lane.
- mov eax,ebx
- xor edx,edx
- mov ecx,ENEMY_LANE_COUNT
- div ecx
- mov edi,eax
- imul edx,ENEMY_LANE_WIDTH
- add edx,(SCREEN_WIDTH-ENEMY_LANE_COUNT*ENEMY_LANE_WIDTH)/2
+ ; Later waves add shooters with distinct enemy art.
  mov eax,[esi+E_TYPE]
  imul eax,T_SIZE
- mov ecx,ENEMY_LANE_WIDTH
- sub ecx,[type_table+eax+T_W]
- shr ecx,1
- add edx,ecx
- mov [esi+E_X],edx
- mov [esi+E_SX],edx
-
- cmp edi,0
- jne .rear_start
- mov eax,ENEMY_FRONT_TOP
- mov ecx,ENEMY_FRONT_BAND_HEIGHT
- jmp .start_y
-.rear_start:
- mov eax,ENEMY_REAR_TOP
- mov ecx,ENEMY_REAR_BAND_HEIGHT
-.start_y:
- mov edx,[esi+E_TYPE]
- imul edx,T_SIZE
- sub ecx,[type_table+edx+T_H]
- shr ecx,1
- add eax,ecx
- mov edi,eax
- call get_formation_lane_offset
- add edi,eax
- mov [esi+E_Y],edi
- mov [esi+E_SY],edi
- mov dword [esi+E_ACTIVE],1
+ mov edx,[type_table+eax+T_SHOOT]
+ mov [enemy_shoot_enabled+ebx],dl
+ mov eax,[current_wave]
+ dec eax
+ cmp eax,WAVE_REGULAR_COUNT-1
+ jbe .bonus_wave_ok
+ mov eax,WAVE_REGULAR_COUNT-1
+.bonus_wave_ok:
+ shl eax,2
+ mov edx,[wave_extra_shooter_masks+eax]
+ mov ecx,ebx
+ shr edx,cl
+ test dl,1
+ jz .no_bonus_shooter
+ mov byte [enemy_shoot_enabled+ebx],1
+.no_bonus_shooter:
+ call place_enemy_randomly
  call random_enemy_move_interval
  mov [enemy_move_intervals+ebx*4],eax
- call choose_enemy_target
- mov eax,[esi+E_TYPE]
- imul eax,T_SIZE
- cmp dword [type_table+eax+T_SHOOT],0
+ cmp byte [enemy_shoot_enabled+ebx],0
  je .no_fire_timer
  call random_attack_delay
  mov [enemy_fire_intervals+ebx*4],eax
@@ -345,22 +395,17 @@ initialize_enemies:
 .boss:
  mov dword [boss_mode],1
  mov dword [alive_count],1
- mov dword [move_interval],200
- mov dword [attack_min_interval],1200
- mov dword [attack_interval_range],1201
- mov dword [enemy_move_min_interval],90
- mov dword [enemy_move_interval_range],181
- mov dword [enemy_shot_step_ms],90
- mov dword [enemies+E_ACTIVE],1
+ mov dword [attack_min_interval],1000
+ mov dword [attack_interval_range],1001
+ mov dword [enemy_move_min_interval],50
+ mov dword [enemy_move_interval_range],121
+ mov dword [enemy_shot_step_ms],HOSTILE_SHOT_BASE_MS-HOSTILE_SHOT_STAGE_ACCEL_MS*3
+ mov byte [enemy_shoot_enabled],1
  mov dword [enemies+E_TYPE],5
  mov dword [enemies+E_HP],20
- mov dword [enemies+E_X],34
- mov dword [enemies+E_SX],34
- mov dword [enemies+E_Y],TOP
- mov dword [enemies+E_SY],TOP
  xor ebx,ebx
  mov esi,enemies
- call choose_enemy_target
+ call place_enemy_randomly
  call random_enemy_move_interval
  mov [enemy_move_intervals],eax
  call random_attack_delay
@@ -371,18 +416,12 @@ initialize_enemies:
  pop ebx
  ret
 
-; reset_enemy_positions(): preserves HP/dead slots and resets movement/drop timers.
+; reset_enemy_positions(): preserves HP/dead slots and resets movement timers.
 reset_enemy_positions:
  push esi
  push edi
  push ebx
- xor eax,eax
- mov edi,enemy_lane_descent
- mov ecx,ENEMY_LANE_COUNT
- a32 rep stosb
- mov edi,enemy_lane_drop_timers
- mov ecx,ENEMY_LANE_COUNT
- a32 rep stosd
+ mov byte [enemy_position_clearance],ENEMY_CLEARANCE
  mov esi,enemies
  xor edi,edi
  mov ecx,MAX_ENEMIES
@@ -393,17 +432,9 @@ reset_enemy_positions:
  mov [esi+E_Y],eax
  mov dword [enemy_move_timers+edi*4],0
  mov dword [enemy_fire_timers+edi*4],0
- cmp dword [esi+E_ACTIVE],0
- je .next_reset
- mov ebx,edi
- call choose_enemy_target
-.next_reset:
  add esi,E_SIZE
  inc edi
  loop .loop
- mov dword [direction],1
- mov dword [move_timer],0
- mov dword [attack_timer],0
  and dword [enemy_events],~EV_BREACH
  pop ebx
  pop edi
@@ -476,84 +507,8 @@ consume_enemy_events:
  xchg eax,[enemy_events]
  ret
 
-; move_enemies(): one atomic formation step. Boss reverses without descending.
-move_enemies:
- push ebx
- push esi
- push edi
- cmp dword [alive_count],0
- je .done
- test dword [enemy_events],EV_BREACH
- jnz .done
- mov esi,enemies
- mov edi,MAX_ENEMIES
-.check:
- cmp dword [esi+E_ACTIVE],0
- je .next
- mov eax,[esi+E_TYPE]
- imul eax,T_SIZE
- mov edx,[esi+E_X]
- add edx,[direction]
- cmp edx,LEFT
- jl .edge
- add edx,[type_table+eax+T_W]
- cmp edx,RIGHT
- jg .edge
-.next:
- add esi,E_SIZE
- dec edi
- jnz .check
- mov esi,enemies
- mov ecx,MAX_ENEMIES
-.horizontal:
- cmp dword [esi+E_ACTIVE],0
- je .hnext
- mov eax,[direction]
- add [esi+E_X],eax
-.hnext:
- add esi,E_SIZE
- loop .horizontal
- jmp .done
-.edge:
- neg dword [direction]
- cmp dword [boss_mode],0
- jne .done
- ; Validate every descent before committing any position.
- mov esi,enemies
- mov ecx,MAX_ENEMIES
-.validate:
- cmp dword [esi+E_ACTIVE],0
- je .vnext
- mov eax,[esi+E_TYPE]
- imul eax,T_SIZE
- mov edx,[esi+E_Y]
- inc edx
- add edx,[type_table+eax+T_H]
- cmp edx,BOTTOM
- jg .breach
-.vnext:
- add esi,E_SIZE
- loop .validate
- mov esi,enemies
- mov ecx,MAX_ENEMIES
-.descend:
- cmp dword [esi+E_ACTIVE],0
- je .dnext
- inc dword [esi+E_Y]
-.dnext:
- add esi,E_SIZE
- loop .descend
- jmp .done
-.breach:
- or dword [enemy_events],EV_BREACH
-.done:
- pop edi
- pop esi
- pop ebx
- ret
-
 ; fire_enemy(): random starting slot followed by an eligibility scan.
-; Upper-row shooters are skipped while their lower-row ally is alive.
+; The random cursor avoids choosing the same active shooter every time.
 fire_enemy:
  push ebx
  push esi
@@ -577,16 +532,9 @@ fire_enemy:
  add esp,4
  test eax,eax
  jz .next
- cmp dword [edx+T_SHOOT],0
+ cmp byte [enemy_shoot_enabled+ebx],0
  je .next
  mov esi,eax
- cmp dword [boss_mode],0
- jne .spawn
- cmp ebx,5
- jae .spawn
- imul eax,ebx,E_SIZE
- cmp dword [enemies+5*E_SIZE+eax+E_ACTIVE],0
- jne .next
 .spawn:
  mov ecx,[edx+T_H]
  add ecx,[esi+E_Y]
@@ -619,7 +567,7 @@ fire_enemy_slot:
  add esp,4
  test eax,eax
  jz .done
- cmp dword [edx+T_SHOOT],0
+ cmp byte [enemy_shoot_enabled+ebx],0
  je .done
  mov esi,eax
  mov ecx,[edx+T_H]
@@ -636,28 +584,6 @@ fire_enemy_slot:
  pop edi
  pop esi
  pop ebx
- ret
-
-; Higher waves move farther on each randomly timed horizontal step.
-random_enemy_horizontal_step:
- mov eax,1
- mov ecx,3
- cmp dword [current_wave],3
- jb .roll
- mov ecx,4
-.roll:
- call random_in_range
- ret
-
-; Higher waves also vary the size of vertical movement.
-random_enemy_vertical_step:
- mov eax,1
- mov ecx,2
- cmp dword [current_wave],3
- jb .roll
- mov ecx,3
-.roll:
- call random_in_range
  ret
 
 ; update_enemies(): independently wander active enemies and schedule a random volley.
@@ -679,80 +605,12 @@ update_enemies:
  jb .fire_timer
  sub eax,[enemy_move_intervals+ebx*4]
  mov [enemy_move_timers+ebx*4],eax
- call next_random
- shr eax,16
- test al,1
- jz .move_x
- jmp .move_y
-.move_x:
- movzx edi,byte [enemy_target_x+ebx]
- mov eax,[esi+E_X]
- cmp eax,edi
- je .move_y
- jb .x_right
- call random_enemy_horizontal_step
- mov edx,[esi+E_X]
- sub edx,eax
- jc .x_left_target
- cmp edx,edi
- jae .x_left_store
-.x_left_target:
- mov edx,edi
-.x_left_store:
- mov [esi+E_X],edx
- jmp .reschedule
-.x_right:
- call random_enemy_horizontal_step
- mov edx,[esi+E_X]
- add edx,eax
- cmp edx,edi
- jbe .x_right_store
- mov edx,edi
-.x_right_store:
- mov [esi+E_X],edx
- jmp .reschedule
-.move_y:
- movzx edi,byte [enemy_target_y+ebx]
- mov eax,[esi+E_Y]
- cmp eax,edi
- je .choose_target
- jb .y_down
- call random_enemy_vertical_step
- mov edx,[esi+E_Y]
- sub edx,eax
- jc .y_up_target
- cmp edx,edi
- jae .y_up_store
-.y_up_target:
- mov edx,edi
-.y_up_store:
- mov [esi+E_Y],edx
- jmp .reschedule
-.y_down:
- call random_enemy_vertical_step
- mov edx,[esi+E_Y]
- add edx,eax
- cmp edx,edi
- jbe .y_down_store
- mov edx,edi
-.y_down_store:
- mov [esi+E_Y],edx
- jmp .reschedule
-.choose_target:
- movzx eax,byte [enemy_target_x+ebx]
- cmp eax,[esi+E_X]
- jne .reschedule
- movzx eax,byte [enemy_target_y+ebx]
- cmp eax,[esi+E_Y]
- jne .reschedule
- call choose_enemy_target
-.reschedule:
+ call random_enemy_step
+ .reschedule:
  call random_enemy_move_interval
  mov [enemy_move_intervals+ebx*4],eax
 .fire_timer:
- mov eax,[esi+E_TYPE]
- imul eax,T_SIZE
- cmp dword [type_table+eax+T_SHOOT],0
+ cmp byte [enemy_shoot_enabled+ebx],0
  je .next_enemy
  mov eax,[enemy_fire_timers+ebx*4]
  add eax,50
@@ -769,50 +627,6 @@ update_enemies:
  inc ebx
  cmp ebx,MAX_ENEMIES
  jb .wander
- jmp .lane_descent
-.lane_descent:
- ; Lane pairs descend on separate timers, so the formation never steps down
- ; as one synchronized block.
- cmp dword [boss_mode],0
- jne .done
- xor ebx,ebx
-.lane:
- mov eax,[enemy_lane_drop_timers+ebx*4]
- add eax,50
- cmp eax,[enemy_lane_drop_intervals+ebx*4]
- jb .store_lane_timer
- sub eax,[enemy_lane_drop_intervals+ebx*4]
- mov [enemy_lane_drop_timers+ebx*4],eax
- inc byte [enemy_lane_descent+ebx]
-
- mov esi,enemies
- mov eax,ebx
- imul eax,E_SIZE
- add esi,eax
- cmp dword [esi+E_ACTIVE],0
- je .rear_lane
- inc dword [esi+E_Y]
- inc byte [enemy_target_y+ebx]
-.rear_lane:
- mov esi,enemies
- mov eax,ebx
- add eax,ENEMY_LANE_COUNT
- imul eax,E_SIZE
- add esi,eax
- cmp dword [esi+E_ACTIVE],0
- je .reschedule_lane
- inc dword [esi+E_Y]
- inc byte [enemy_target_y+ebx+ENEMY_LANE_COUNT]
-.reschedule_lane:
- call random_enemy_lane_drop_interval
- mov [enemy_lane_drop_intervals+ebx*4],eax
- jmp .next_lane
-.store_lane_timer:
- mov [enemy_lane_drop_timers+ebx*4],eax
-.next_lane:
- inc ebx
- cmp ebx,ENEMY_LANE_COUNT
- jb .lane
 .done:
  popad
  ret
