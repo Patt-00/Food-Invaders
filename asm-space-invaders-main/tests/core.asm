@@ -2,7 +2,14 @@ section .data
 %include "assets/source_art.inc"
 source_enemy_art_pointers dd source_cupcake_art,source_fries_art,source_burger_art
                          dd source_hotdog_art,source_pizza_art,source_rat_art
-test_art_width dd 0
+test_art_source_width dd 0
+test_art_output_width dd 0
+test_art_source_row dd 0
+test_art_source_column dd 0
+test_art_output_rows dd 0
+test_art_type dd 0
+test_spawn_min_y dd 0
+test_spawn_max_y dd 0
 test_count dd 0
 written dd 0
 output_buffer times 160 db 0
@@ -348,11 +355,11 @@ tests_start:
  check dword [attack_min_interval],1000,'boss fires faster than the final regular wave'
  check dword [enemy_move_min_interval],50,'boss movement is the fastest stage profile'
  check dword [enemy_shot_step_ms],35,'boss shots use the fastest hostile-shot profile'
- mov dword [enemies+E_X],RIGHT-15
+ mov dword [enemies+E_X],RIGHT-8
  mov dword [enemies+E_Y],TOP
  call fire_enemy
- check dword [shots+S_X],RIGHT-8,'boss shot centered'
- check dword [shots+S_Y],TOP+ENEMY_HEIGHT,'boss shot below full-size art'
+ check dword [shots+S_X],RIGHT-4,'boss shot centered'
+ check dword [shots+S_Y],TOP+ENEMY_HEIGHT,'boss shot below half-size art'
  push dword 20
  push dword 0
  call apply_enemy_damage
@@ -448,16 +455,16 @@ tests_start:
  call show_main_menu
  check word [back_buffer+(MENU_TITLE_ROW*SCREEN_WIDTH+TEST_MENU_TITLE_X)*2],0A46h,'Food Invaders menu title'
  check word [back_buffer+(MENU_DIFFICULTY_ROW*SCREEN_WIDTH+TEST_MENU_DIFFICULTY_X)*2],0E44h,'menu explains selectable difficulty'
- check word [back_buffer+(MENU_ENEMY_ROW*SCREEN_WIDTH+10)*2],0D23h,'menu previews cupcake ASCII art'
- check word [back_buffer+(MENU_ENEMY_ROW*SCREEN_WIDTH+35)*2],0E23h,'menu previews fries ASCII art'
- check word [back_buffer+((MENU_ENEMY_ROW+(16-11)/2)*SCREEN_WIDTH+59)*2],0B23h,'menu previews burger ASCII art'
- check word [back_buffer+(MENU_ENEMY_ROW*SCREEN_WIDTH+87)*2],0C23h,'menu previews hotdog ASCII art'
- check word [back_buffer+(MENU_ENEMY_ROW*SCREEN_WIDTH+111)*2],0A23h,'menu previews pizza ASCII art'
+ check word [back_buffer+(MENU_ENEMY_ROW*SCREEN_WIDTH+12)*2],0D23h,'menu previews half-size cupcake art'
+ check word [back_buffer+(MENU_ENEMY_ROW*SCREEN_WIDTH+37)*2],0E23h,'menu previews half-size fries art'
+ check word [back_buffer+((MENU_ENEMY_ROW+1)*SCREEN_WIDTH+62)*2],0B23h,'menu previews half-size burger art'
+ check word [back_buffer+(MENU_ENEMY_ROW*SCREEN_WIDTH+89)*2],0C23h,'menu previews half-size hotdog art'
+ check word [back_buffer+(MENU_ENEMY_ROW*SCREEN_WIDTH+114)*2],0A23h,'menu previews half-size pizza art'
  check word [back_buffer+(MENU_SHOWCASE_ROW*SCREEN_WIDTH+16)*2],0F23h,'menu previews Ratatouille ASCII art'
  check word [back_buffer+(MENU_SHOWCASE_ROW*SCREEN_WIDTH+44)*2],0B23h,'menu previews cleaver ASCII art'
- check word [back_buffer+(MENU_SHOWCASE_ROW*SCREEN_WIDTH+62)*2],0F23h,'menu previews Chef ASCII art'
- check word [back_buffer+(MENU_SHOWCASE_ROW*SCREEN_WIDTH+85)*2],0E23h,'menu previews rolling pin ASCII art'
- check word [back_buffer+((MENU_SHOWCASE_ROW-1)*SCREEN_WIDTH+109)*2],0E23h,'menu previews fireball ASCII art'
+ check word [back_buffer+(MENU_SHOWCASE_ROW*SCREEN_WIDTH+64)*2],0F23h,'menu previews half-size Chef art'
+ check word [back_buffer+(MENU_SHOWCASE_ROW*SCREEN_WIDTH+83)*2],0E23h,'menu previews half-size rolling pin art'
+ check word [back_buffer+((MENU_SHOWCASE_ROW-1)*SCREEN_WIDTH+106)*2],0E23h,'menu previews half-size fireball art'
  mov ah,05h
  mov cx,0231h                 ; BIOS enqueue '1': Easy.
  int 16h
@@ -495,12 +502,12 @@ tests_start:
  mov dword [enemies+E_SX],0
  mov dword [enemies+E_SY],5
  call draw_game
- check word [back_buffer+(5*SCREEN_WIDTH+7)*2],0D23h,'full-size cupcake art drawn at an arbitrary position'
+ check word [back_buffer+(5*SCREEN_WIDTH+4)*2],0D23h,'half-size cupcake art drawn at an arbitrary position'
  check word [back_buffer+(TEST_PLAYER_Y*SCREEN_WIDTH+TEST_PLAYER_X+2)*2],0F23h,'chef drawn in player area'
  push es
  mov ax,0B800h
  mov es,ax
- mov ax,[es:(5*SCREEN_WIDTH+7)*2]
+ mov ax,[es:(5*SCREEN_WIDTH+4)*2]
  pop es
  check ax,0D23h,'VGA memory contains rendered cupcake artwork'
  mov byte [pickup_active],1
@@ -511,8 +518,8 @@ tests_start:
  call draw_pickup
  mov esi,source_fireball_art
  mov edi,back_buffer+(50*SCREEN_WIDTH+40)*2
- mov ecx,PICKUP_WIDTH
- mov ebp,PICKUP_HEIGHT
+ mov ecx,SOURCE_PICKUP_WIDTH
+ mov ebp,SOURCE_PICKUP_HEIGHT
  mov bl,0Ah
  call verify_art_rows
  inc dword [test_count]
@@ -545,12 +552,12 @@ tests_start:
  add eax,[enemies+E_X]
  shl eax,1
  mov dx,[back_buffer+eax]
- check dx,0F23h,'full-size Ratatouille art renders at its randomized position'
+ check dx,0F23h,'half-size Ratatouille art renders at its randomized position'
  call show_game_over
  check word [back_buffer+(RESULT_TITLE_ROW*SCREEN_WIDTH+TEST_GAMEOVER_TITLE_X)*2],0C47h,'game over title is centered'
  check word [back_buffer+(RESULT_ART_ROW*SCREEN_WIDTH+36)*2],0F23h,'game over previews Ratatouille art'
  check word [back_buffer+(RESULT_ART_ROW*SCREEN_WIDTH+62)*2],0F23h,'game over previews Chef art'
- check word [back_buffer+((RESULT_ART_ROW-1)*SCREEN_WIDTH+89)*2],0E23h,'game over previews fireball art'
+ check word [back_buffer+((RESULT_ART_ROW-1)*SCREEN_WIDTH+86)*2],0E23h,'game over previews fireball art'
  mov dword [score],1220
  call show_victory
  check word [back_buffer+(RESULT_TITLE_ROW*SCREEN_WIDTH+TEST_VICTORY_TITLE_X)*2],0A4Bh,'victory title is centered'
@@ -645,6 +652,7 @@ verify_enemy_art_collection:
  mov dword [alive_count],1
  xor ebx,ebx
 .art:
+ mov [test_art_type],ebx
  mov dword [enemies+E_ACTIVE],1
  mov [enemies+E_TYPE],ebx
  mov dword [enemies+E_X],10
@@ -653,13 +661,14 @@ verify_enemy_art_collection:
  call draw_enemy
  mov eax,ebx
  imul eax,T_SIZE
- mov ecx,[type_table+eax+T_W]
- mov ebp,[type_table+eax+T_H]
+ movzx ecx,byte [enemy_source_widths+ebx]
+ movzx ebp,byte [enemy_source_heights+ebx]
  mov esi,[source_enemy_art_pointers+ebx*4]
  mov bl,[type_table+eax+T_COLOR]
  mov edi,back_buffer+(20*SCREEN_WIDTH+10)*2
  call verify_art_rows
  inc dword [test_count]
+ mov ebx,[test_art_type]
  inc ebx
  cmp ebx,6
  jb .art
@@ -746,8 +755,10 @@ verify_random_wandering:
 ; Verify randomized spawn bounds, separation, and coverage for a fixed seed.
 verify_enemy_scatter:
  pushad
- xor ebp,ebp
+ mov ebp,SCREEN_WIDTH
  xor edi,edi
+ mov dword [test_spawn_min_y],SCREEN_HEIGHT
+ mov dword [test_spawn_max_y],0
  xor ebx,ebx
 .enemy:
  mov eax,ebx
@@ -775,36 +786,41 @@ verify_enemy_scatter:
  mov ecx,[type_table+eax+T_W]
  shr ecx,1
  add edx,ecx
- cmp edx,SCREEN_WIDTH/3
- jb .left
- cmp edx,(SCREEN_WIDTH*2)/3
- jb .middle
- or ebp,4
- jmp .vertical
-.left:
- or ebp,1
- jmp .vertical
-.middle:
- or ebp,2
-.vertical:
- mov eax,[esi+E_Y]
- cmp eax,TOP+17
- jb .upper
- cmp eax,TOP+34
- jb .middle_y
- or edi,4
- jmp .next
-.upper:
- or edi,1
- jmp .next
-.middle_y:
- or edi,2
+ cmp edx,ebp
+ jae .min_x_ready
+ mov ebp,edx
+.min_x_ready:
+ cmp edx,edi
+ jbe .max_x_ready
+ mov edi,edx
+.max_x_ready:
+ mov edx,[esi+E_Y]
+ mov ecx,[type_table+eax+T_H]
+ shr ecx,1
+ add edx,ecx
+ cmp edx,[test_spawn_min_y]
+ jae .min_y_ready
+ mov [test_spawn_min_y],edx
+.min_y_ready:
+ cmp edx,[test_spawn_max_y]
+ jbe .next
+ mov [test_spawn_max_y],edx
 .next:
  inc ebx
  cmp ebx,MAX_ENEMIES
  jb .enemy
- check ebp,7,'enemy starts cover the full playfield width'
- check edi,7,'enemy starts cover the safe playfield height'
+ mov eax,edi
+ sub eax,ebp
+ cmp eax,SCREEN_WIDTH/3
+ jae .wide_x
+ check eax,SCREEN_WIDTH/3-1,'random spawns cover a broad part of the screen width'
+.wide_x:
+ mov eax,[test_spawn_max_y]
+ sub eax,[test_spawn_min_y]
+ cmp eax,(ENEMY_BREACH_LINE-TOP)/3
+ jae .wide_y
+ check eax,(ENEMY_BREACH_LINE-TOP)/3-1,'random spawns cover a broad part of the safe height'
+.wide_y:
  popad
  ret
 
@@ -956,27 +972,42 @@ test_failed:
  mov ax,4C01h
  int 21h
 
-; Compare ECX by EBP cells from DS:ESI with rendered words at ES:EDI.
-; BL is the expected color. A mismatch names the complete-art check.
+; Compare the half-scale sample of DS:ESI with rendered words at ES:EDI.
+; ECX/EBP are source dimensions; BL is the expected color.
 verify_art_rows:
  pushad
- mov [test_art_width],ecx
+ mov [test_art_source_width],ecx
+ inc ecx
+ shr ecx,1
+ mov [test_art_output_width],ecx
+ mov eax,ebp
+ inc eax
+ shr eax,1
+ mov [test_art_output_rows],eax
+ mov dword [test_art_source_row],0
 .row:
- mov ecx,[test_art_width]
+ mov dword [test_art_source_column],0
+ mov ecx,[test_art_output_width]
 .cell:
- lodsb
+ mov eax,[test_art_source_row]
+ mov edx,[test_art_source_width]
+ imul eax,edx
+ add eax,[test_art_source_column]
+ mov al,[esi+eax]
  mov ah,bl
  cmp word [edi],ax
  jne .bad
  add edi,2
+ add dword [test_art_source_column],2
  dec ecx
  jnz .cell
- mov eax,[test_art_width]
+ mov eax,[test_art_output_width]
  shl eax,1
  mov edx,SCREEN_WIDTH*2
  sub edx,eax
  add edi,edx
- dec ebp
+ add dword [test_art_source_row],2
+ dec dword [test_art_output_rows]
  jnz .row
  popad
  ret

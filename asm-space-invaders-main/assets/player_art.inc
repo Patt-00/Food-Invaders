@@ -1,4 +1,4 @@
-; Original 12x16 document artwork. Drawn at native size, one character per cell.
+; Original 12x16 document artwork. The renderer samples it at 6x8 cells.
 player_art:
     db '  ########  '
     db '  ########  '

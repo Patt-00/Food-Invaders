@@ -3,12 +3,14 @@
 SCREEN_WIDTH    equ 132
 SCREEN_HEIGHT   equ 88
 PLAYFIELD_TOP   equ 1        ; Row zero belongs to the HUD.
-PLAYER_WIDTH    equ 12
-PLAYER_HEIGHT   equ 16
+PLAYER_WIDTH    equ 6
+PLAYER_HEIGHT   equ 8
 SOURCE_ART_WIDTH equ 12
 SOURCE_ART_HEIGHT equ 16
-WEAPON_WIDTH    equ SOURCE_ART_WIDTH
-WEAPON_HEIGHT   equ SOURCE_ART_HEIGHT
+WEAPON_WIDTH    equ 6
+WEAPON_HEIGHT   equ 8
+SOURCE_PICKUP_WIDTH equ 14
+SOURCE_PICKUP_HEIGHT equ 18
 BULLET_SPEED    equ 2        ; Keeps a shot in the shorter viewport through its cooldown.
 HOSTILE_SHOT_WIDTH equ 1
 HOSTILE_SHOT_HEIGHT equ 1
@@ -27,12 +29,12 @@ PLAYER_HITBOX_HEIGHT equ PLAYER_HEIGHT
     %error "Text frame must fit in VGA text memory"
 %endif
 
-; The Chef and both weapon designs use their full documented dimensions.
-%if PLAYER_WIDTH != SOURCE_ART_WIDTH || PLAYER_HEIGHT != SOURCE_ART_HEIGHT
-    %error "Player dimensions must match source artwork dimensions"
+; Character art is drawn at half its document width and height.
+%if PLAYER_WIDTH * 2 != SOURCE_ART_WIDTH || PLAYER_HEIGHT * 2 != SOURCE_ART_HEIGHT
+    %error "Chef dimensions must be half the source artwork"
 %endif
-%if WEAPON_WIDTH != SOURCE_ART_WIDTH || WEAPON_HEIGHT != SOURCE_ART_HEIGHT
-    %error "Weapon dimensions must match the source artwork"
+%if WEAPON_WIDTH * 2 != SOURCE_ART_WIDTH || WEAPON_HEIGHT * 2 != SOURCE_ART_HEIGHT
+    %error "Weapon dimensions must be half the source artwork"
 %endif
 %if BULLET_SPEED < 1 || BULLET_SPEED > WEAPON_HEIGHT
     %error "Projectile steps must stay within sprite height to avoid skipped collisions"
@@ -51,8 +53,11 @@ BOOST_BURST_COUNT equ 2
 BOOST_FRAMES    equ 80       ; Roughly four seconds.
 INITIAL_ENEMY_HEALTH equ 8   ; Eight cleavers or four rolling pins per demo enemy.
 PICKUP_STEP_TICKS equ 4      ; A falling pickup moves once every 200 ms.
-PICKUP_WIDTH equ 14
-PICKUP_HEIGHT equ 18
+PICKUP_WIDTH equ 7
+PICKUP_HEIGHT equ 9
+%if PICKUP_WIDTH * 2 != SOURCE_PICKUP_WIDTH || PICKUP_HEIGHT * 2 != SOURCE_PICKUP_HEIGHT
+    %error "Pickup dimensions must be half the source artwork"
+%endif
 
 ENEMY_MOVE_BASE_MIN_MS equ 120
 ENEMY_MOVE_BASE_RANGE_MS equ 241
@@ -74,8 +79,8 @@ HOSTILE_SHOT_STAGE_ACCEL_MS equ 15
 %define POWERUP_DAMAGE 2
 %define POWERUP_RAPID 3
 
-ENEMY_WIDTH     equ 22       ; Widest source design: the cupcake.
-ENEMY_HEIGHT    equ 16       ; Tallest food enemy source design.
+ENEMY_WIDTH     equ 11       ; Widest half-scale design: the cupcake.
+ENEMY_HEIGHT    equ 8        ; Tallest half-scale food enemy.
 MENU_ENEMY_PREVIEW_COUNT equ 5
 MENU_ENEMY_PREVIEW_WIDTH equ (SCREEN_WIDTH / MENU_ENEMY_PREVIEW_COUNT)
 ; Enemies roam the full field but stop above the Chef's safe area.

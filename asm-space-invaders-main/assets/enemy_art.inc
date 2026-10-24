@@ -7,12 +7,16 @@
 %endmacro
 
 type_table:
- dd 1,22,16,10,0,art_cupcake,0x0D
- dd 1,14,16,10,0,art_fries,0x0E
- dd 2,14,11,20,0,art_burger,0x0B
- dd 1,14,16,20,1,art_hotdog,0x0C
- dd 2,14,16,30,1,art_pizza,0x0A
- dd 20,15,16,500,1,art_rat,0x0F
+ dd 1,11,8,10,0,art_cupcake,0x0D
+ dd 1,7,8,10,0,art_fries,0x0E
+ dd 2,7,6,20,0,art_burger,0x0B
+ dd 1,7,8,20,1,art_hotdog,0x0C
+ dd 2,7,8,30,1,art_pizza,0x0A
+ dd 20,8,8,500,1,art_rat,0x0F
+
+; Source dimensions are retained so the renderer can sample each sprite at half size.
+enemy_source_widths db 22,14,14,14,14,15
+enemy_source_heights db 16,16,11,16,16,16
 
 art_cupcake:
     padded_art_row '       ####',22

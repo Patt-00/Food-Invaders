@@ -10,10 +10,10 @@
 | Initial completion estimate | 76% |
 | Broader project estimate | 84% |
 | Broader project gap | 16 percentage points, outside the active scope |
-| Repository | `https://github.com/Patt-00/asm-space-invaders.git` |
-| Working branch | `codex/finish-polish` |
-| Published source | The validated source and documentation from this cycle are synchronized to `origin/main`. |
-| Source branch synchronization | Updated by fast-forward push and remote readback after the current build and test checks. |
+| Repository | `https://github.com/Patt-00/Food-Invaders` |
+| Working branch | `main` |
+| Published source | The half-scale character rendering and fullscreen launch preset are included in the current main-branch update. |
+| Source branch synchronization | NASM and DOSBox-X normal/dynamic checks pass; verify remote main after the current commit. |
 | Goal status | Complete for the code/game scope. Broader course deliverables remain outside this goal. |
 
 The broader project estimate uses the weighted rubric in `COMPLETION_AUDIT.md`. It includes group, course-document, and presentation requirements that the current code/game goal excludes. The Xvfb captures used a virtual X11 display, not a physical presentation computer, and a human-length campaign was not played.
@@ -32,6 +32,7 @@ The broader project estimate uses the weighted rubric in `COMPLETION_AUDIT.md`. 
 | 2026-10-20 | Audited the actual CS 003 requirements and the current group report without editing the Google Doc. | Read-only Google Drive review identified old screen dimensions and test counts, blank Appendix C, missing Appendix D evidence, pending library reference, and group review items. |
 | 2026-10-20 | Added the weighted completion audit and presentation-readiness guide. | `COMPLETION_AUDIT.md` assigns status, points, evidence, remaining work, and priority to project-specific requirements. |
 | 2026-10-20 | Created a ten-slide editable PowerPoint with presenter notes. | Artifact Tool finalization passed package integrity, layout geometry, font policy, and first-party import checks. LibreOffice 26.2.6.3 imported the deck and rendered ten PDF pages; all ten were inspected at full size. Slide 9 was corrected after the first visual review. |
+| 2026-10-24 | Reduced character artwork to half source dimensions, synchronized hitboxes and pickup bounds, and set DOSBox-X to full-screen 3:2 output. | NASM built all four COM files. Headless suites pass; DOSBox-X normal and dynamic 386 suites each pass with 43,533 core assertions. A windowed DOSBox-X preview shows smaller sprites. Fullscreen Xvfb capture was blank, so review the fullscreen appearance on the presentation display. |
 
 ## Broader project backlog outside the active code/game goal
 

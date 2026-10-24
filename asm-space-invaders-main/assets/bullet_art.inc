@@ -1,4 +1,4 @@
-; Original 12x16 document artwork; draw_weapon_sprite renders every cell.
+; Original 12x16 document artwork; draw_weapon_sprite renders it at 6x8.
 cleaver_art:
     db '     ###### '
     db '  ##########'

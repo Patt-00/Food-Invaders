@@ -29,30 +29,26 @@ if ! xdpyinfo -display "$DISPLAY" >/dev/null 2>&1; then
 fi
 
 am start -n com.termux.x11/.MainActivity >/dev/null 2>&1 || true
-# Scale the 1056x704 text raster to 75%, including the board and every sprite.
-# Nearest-neighbor output keeps the smaller 6x6-pixel text cells crisp.
+# Use the full Termux:X11 display while preserving the board's 3:2 ratio.
+# Character artwork is rendered at half its source dimensions.
 set -- $(xdpyinfo -display "$DISPLAY" | awk '/dimensions:/ {split($2, size, "x"); print size[1], size[2]; exit}')
-window_width=792
-window_height=528
-window_left=$((($1 - window_width) / 2))
-window_top=$((($2 - window_height) / 2))
-if [ "$window_left" -lt 0 ]; then window_left=0; fi
-if [ "$window_top" -lt 0 ]; then window_top=0; fi
+display_width=$1
+display_height=$2
 config_file=$(mktemp)
 trap 'rm -f "$config_file"' EXIT
 cat > "$config_file" <<EOF
 [sdl]
 output=openglnb
-windowresolution=${window_width}x${window_height}
-windowposition=${window_left},${window_top}
-fullscreen=false
+fullscreen=true
+fullresolution=desktop
 autolock=false
 [dosbox]
 machine=svga_s3
 working directory option=noprompt
 [render]
 scaler=none
-aspect=false
+aspect=true
+aspect_ratio=3:2
 modeswitch=false
 glshader=none
 [cpu]
@@ -71,7 +67,7 @@ if command -v xdotool >/dev/null 2>&1; then
     while kill -0 "$emulator_pid" 2>/dev/null && [ "$attempts" -lt 30 ]; do
         window_id=$(xdotool search --pid "$emulator_pid" --name DOSBox 2>/dev/null | head -n 1 || true)
         if [ -n "$window_id" ] && xdotool getwindowgeometry --shell "$window_id" 2>/dev/null |
-            awk -F= '/^WIDTH=/ {w=$2} /^HEIGHT=/ {h=$2} END {exit !(w==792 && h==528)}'; then
+            awk -F= -v expected_width="$display_width" -v expected_height="$display_height" '/^WIDTH=/ {w=$2} /^HEIGHT=/ {h=$2} END {exit !(w==expected_width && h==expected_height)}'; then
             sleep 0.3
             xdotool windowunmap "$window_id" windowmap "$window_id" windowfocus "$window_id" || true
             break

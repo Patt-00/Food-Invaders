@@ -1,6 +1,6 @@
 # Food Invaders
 
-Food Invaders is a 16-bit NASM game for 386-compatible real-mode DOS. You play as the Chef and defend the kitchen from food-themed invaders with a cleaver and rolling pin. The game renders colored ASCII art in a 132 by 88 SVGA text screen and runs in DOSBox-X with `machine=svga_s3`. Its launch preset scales the native 1056 by 704 raster to 792 by 528, so the board and characters display at 75% size.
+Food Invaders is a 16-bit NASM game for 386-compatible real-mode DOS. You play as the Chef and defend the kitchen from food-themed invaders with a cleaver and rolling pin. The 132 by 88 SVGA text board launches full-screen in DOSBox-X and preserves its 3:2 shape. The Chef, enemies, weapons, and pickups render at half their source artwork dimensions.
 
 ## Run on Linux
 
@@ -20,7 +20,7 @@ Install NASM and DOSBox-X in Termux. Install the Termux:X11 app and companion pa
 ./run-termux.sh
 ```
 
-The game uses DOSBox-X's SVGA S3 mode. Its launcher scales the 132x88 board to a 792x528 window (75% of the native 1056x704 raster), including the ASCII characters and sprites. A plain text-only Termux session is not enough for the game window.
+The game uses DOSBox-X's SVGA S3 mode. Its launcher fills the Termux:X11 display while preserving the board's proportions. A plain text-only Termux session is not enough for the game window.
 
 ## Controls
 
