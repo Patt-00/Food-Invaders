@@ -50,6 +50,43 @@ tests_start:
  check dword [enemies+4*E_SIZE+E_HP],2,'pizza HP'
  check dword [enemies+E_Y],ENEMY_FRONT_TOP+(ENEMY_FRONT_BAND_HEIGHT-SOURCE_ART_HEIGHT)/2,'front enemies fit the 3:2 viewport'
  check dword [enemies+5*E_SIZE+E_Y],ENEMY_REAR_TOP+(ENEMY_REAR_BAND_HEIGHT-SOURCE_ART_HEIGHT)/2,'rear enemies stay clear of the front band'
+ ; Each wave spreads shooter types and tightens its timing profile.
+ call get_test_shooter_lane_mask
+ check eax,29,'stage 1 shooters cover left middle and right lanes'
+ check dword [attack_min_interval],2600,'stage 1 attack cadence'
+ check dword [enemy_move_min_interval],180,'stage 1 movement cadence'
+ check dword [enemy_lane_drop_min_interval],4000,'stage 1 descent cadence'
+ check dword [enemy_shot_step_ms],170,'stage 1 hostile-shot speed'
+ mov dword [current_wave],2
+ call initialize_enemies
+ call get_test_shooter_lane_mask
+ check eax,23,'stage 2 shooters cover left middle and right lanes'
+ check dword [attack_min_interval],2250,'stage 2 attack cadence increases'
+ check dword [enemy_move_min_interval],155,'stage 2 movement cadence increases'
+ check dword [enemy_lane_drop_min_interval],3600,'stage 2 descent cadence increases'
+ check dword [enemy_shot_step_ms],150,'stage 2 hostile shots speed up'
+ check dword [enemies+2*E_SIZE+E_Y],ENEMY_FRONT_TOP+2,'stage 2 uses a V formation'
+ call draw_game
+ check word [back_buffer+(SCREEN_WIDTH+7)*2],0E46h,'stage 2 formation name appears in the HUD'
+ mov dword [current_wave],3
+ call initialize_enemies
+ call get_test_shooter_lane_mask
+ check eax,23,'stage 3 shooters cover left middle and right lanes'
+ check dword [attack_min_interval],1900,'stage 3 attack cadence increases'
+ check dword [enemy_move_min_interval],130,'stage 3 movement cadence increases'
+ check dword [enemy_lane_drop_min_interval],3200,'stage 3 descent cadence increases'
+ check dword [enemy_shot_step_ms],130,'stage 3 hostile shots speed up'
+ check dword [enemies+E_Y],ENEMY_FRONT_TOP+3,'stage 3 uses an inverted V formation'
+ mov dword [current_wave],4
+ call initialize_enemies
+ call get_test_shooter_lane_mask
+ check eax,15,'stage 4 shooters cover left middle and right lanes'
+ check dword [attack_min_interval],1550,'stage 4 attack cadence increases'
+ check dword [enemy_move_min_interval],105,'stage 4 movement cadence increases'
+ check dword [enemy_lane_drop_min_interval],2800,'stage 4 descent cadence increases'
+ check dword [enemy_shot_step_ms],110,'stage 4 hostile shots speed up'
+ check dword [enemies+E_SIZE+E_Y],ENEMY_FRONT_TOP+3,'stage 4 uses a zigzag formation'
+ call initialize_game
  ; A cleared wave must not inherit elapsed movement or firing time.
  mov dword [enemy_move_timers],0A1B2C3D4h
  mov dword [enemy_move_timers+(MAX_ENEMIES-1)*4],012345678h
@@ -91,6 +128,45 @@ tests_start:
  check dword [enemies+E_Y],3,'randomized timer permits horizontal step'
 .timed_step_done:
  check dword [enemy_move_timers],0,'movement timer consumes elapsed interval'
+ ; Fixed seeds exercise independent horizontal and vertical target movement.
+ call solo
+ mov dword [enemy_x],20
+ mov dword [enemy_y],20
+ mov byte [enemy_target_x],40
+ mov byte [enemy_target_y],30
+ mov dword [enemy_move_intervals],50
+ mov dword [enemy_move_timers],0
+ mov dword [random_state],1
+ call update_enemies
+ cmp dword [enemy_x],20
+ ja .random_horizontal_moved
+ check dword [enemy_x],21,'random movement selects horizontal axis'
+.random_horizontal_moved:
+ mov eax,[enemy_x]
+ cmp eax,23
+ jbe .random_horizontal_in_range
+ check eax,23,'horizontal random step stays within wave one limit'
+.random_horizontal_in_range:
+ check dword [enemy_y],20,'horizontal movement preserves the other axis'
+ call solo
+ mov dword [enemy_x],20
+ mov dword [enemy_y],20
+ mov byte [enemy_target_x],40
+ mov byte [enemy_target_y],30
+ mov dword [enemy_move_intervals],50
+ mov dword [enemy_move_timers],0
+ mov dword [random_state],2
+ call update_enemies
+ check dword [enemy_x],20,'vertical movement preserves the other axis'
+ mov eax,[enemy_y]
+ cmp eax,20
+ ja .random_vertical_moved
+ check eax,21,'random movement selects vertical axis'
+.random_vertical_moved:
+ cmp eax,22
+ jbe .random_vertical_in_range
+ check eax,22,'vertical random step stays within wave one limit'
+.random_vertical_in_range:
  ; Both edges, and no repeated descent on the following horizontal tick.
  call solo
  mov dword [enemies+E_X],RIGHT-ENEMY_WIDTH
@@ -242,26 +318,41 @@ tests_start:
  check eax,0,'negative projectile rejected'
  ; Randomized shooter selection blocks upper slots behind living allies.
  call initialize_game
+ mov ebx,5
+ call fire_enemy_slot
+ check dword [shots+S_X],13,'stage 1 hotdog shoots from the left lane'
+ call clear_projectiles
+ mov ebx,7
+ call fire_enemy_slot
+ check dword [shots+S_X],65,'stage 1 pizza shoots from the middle lane'
+ call clear_projectiles
  call fire_enemy
+ check dword [shots+S_ACTIVE],1,'fire selection creates a hostile shot'
  mov eax,[shots+S_X]
- cmp eax,91
- jne .first_check_pizza
- inc dword [test_count]
- jmp .first_bottom_shooter_ok
-.first_check_pizza:
- check eax,117,'first random shooter is an unblocked bottom enemy'
+ cmp eax,13
+ je .first_bottom_shooter_ok
+ cmp eax,65
+ jne .first_check_failure
 .first_bottom_shooter_ok:
+ inc dword [test_count]
+ jmp .first_shooter_done
+.first_check_failure:
+ check eax,13,'first random shooter is an unblocked bottom enemy'
+.first_shooter_done:
  mov eax,ENEMY_REAR_TOP+((ENEMY_REAR_BAND_HEIGHT-SOURCE_ART_HEIGHT)/2)+SOURCE_ART_HEIGHT
  check dword [shots+S_Y],eax,'shot starts below full-size source sprite'
  call fire_enemy
  mov eax,[shots+S_SIZE+S_X]
- cmp eax,91
- jne .second_check_pizza
- inc dword [test_count]
- jmp .second_bottom_shooter_ok
-.second_check_pizza:
- check eax,117,'second random shooter is an unblocked bottom enemy'
+ cmp eax,13
+ je .second_bottom_shooter_ok
+ cmp eax,65
+ jne .second_check_failure
 .second_bottom_shooter_ok:
+ inc dword [test_count]
+ jmp .second_shooter_done
+.second_check_failure:
+ check eax,13,'second random shooter is an unblocked bottom enemy'
+.second_shooter_done:
  mov eax,ENEMY_REAR_TOP+((ENEMY_REAR_BAND_HEIGHT-SOURCE_ART_HEIGHT)/2)+SOURCE_ART_HEIGHT
  check dword [shots+S_SIZE+S_Y],eax,'second bottom shot starts below full-size source sprite'
  ; Single life loss when multiple sources coincide; preserve survivors HP.
@@ -314,6 +405,9 @@ tests_start:
  check dword [alive_count],1,'boss alone'
  check dword [boss_mode],1,'boss encounter'
  check dword [enemies+E_HP],20,'boss health'
+ check dword [attack_min_interval],1200,'boss fires faster than the final regular wave'
+ check dword [enemy_move_min_interval],90,'boss movement is the fastest stage profile'
+ check dword [enemy_shot_step_ms],90,'boss shots use the fastest hostile-shot profile'
  mov dword [enemies+E_X],RIGHT-15
  call move_enemies
  check dword [direction],-1,'boss wall reversal'
@@ -401,7 +495,7 @@ tests_start:
  int 16h
  check al,0,'BIOS keyboard enqueue'
  call read_input
- check byte [player_x],TEST_PLAYER_X+1,'original input right movement'
+ check byte [player_x],TEST_PLAYER_X+PLAYER_MOVE_STEP,'original input right movement'
  mov ah,05h
  mov cx,3920h                 ; Space: fire one cleaver.
  int 16h
@@ -618,6 +712,46 @@ verify_enemy_art_collection:
  cmp ebx,6
  jb .art
  popad
+ ret
+
+; Return one bit per lane containing an active shooter in the current wave.
+get_test_shooter_lane_mask:
+ push ebx
+ push ecx
+ push edx
+ push esi
+ push edi
+ push ebp
+ xor ebp,ebp
+ xor edi,edi
+.loop:
+ mov eax,edi
+ imul eax,E_SIZE
+ add eax,enemies
+ mov esi,eax
+ mov eax,[esi+E_TYPE]
+ imul eax,T_SIZE
+ cmp dword [type_table+eax+T_SHOOT],0
+ je .next
+ mov eax,edi
+ xor edx,edx
+ mov ecx,ENEMY_LANE_COUNT
+ div ecx
+ mov ebx,1
+ mov cl,dl
+ shl ebx,cl
+ or ebp,ebx
+.next:
+ inc edi
+ cmp edi,MAX_ENEMIES
+ jb .loop
+ mov eax,ebp
+ pop ebp
+ pop edi
+ pop esi
+ pop edx
+ pop ecx
+ pop ebx
  ret
 
 ; Stress checks independently count living slots and verify geometry/HP/state.

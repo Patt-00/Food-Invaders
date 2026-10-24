@@ -66,7 +66,7 @@ start:
     call move_player_left
     expect player_x, 0, 'left boundary'
     call move_player_right
-    expect player_x, 1, 'normal right movement'
+    expect player_x, PLAYER_MOVE_STEP, 'normal right movement'
     call move_player_left
     expect player_x, 0, 'normal left movement'
     mov byte [player_x], SCREEN_WIDTH - PLAYER_WIDTH
@@ -74,7 +74,7 @@ start:
     expect player_x, SCREEN_WIDTH - PLAYER_WIDTH, 'right boundary includes full sprite'
     mov byte [player_x], 255
     call move_player_left
-    expect player_x, SCREEN_WIDTH - PLAYER_WIDTH - 1, 'repair invalid position before left movement'
+    expect player_x, SCREEN_WIDTH - PLAYER_WIDTH - PLAYER_MOVE_STEP, 'repair invalid position before left movement'
     mov byte [player_x], 255
     call move_player_right
     expect player_x, SCREEN_WIDTH - PLAYER_WIDTH, 'repair invalid position before right movement'
@@ -208,7 +208,7 @@ start:
     expect powerup_active, 1, 'boost active flag'
     expect fire_cooldown, 8, 'pickup cannot bypass a pending attack cooldown'
     call move_player_right
-    expect player_x, 22, 'boost doubles right movement'
+    expect player_x, 20+PLAYER_BOOST_MOVE_STEP, 'boost increases right movement'
     call move_player_left
     expect player_x, 20, 'boost doubles left movement'
     mov byte [player_x], 1
@@ -244,7 +244,7 @@ start:
     expect bullets_damage, 3, 'in-flight damage survives boost expiry'
     mov byte [player_x], 20
     call move_player_right
-    expect player_x, 21, 'movement returns to normal'
+    expect player_x, 20+PLAYER_MOVE_STEP, 'movement returns to normal'
     call initialize_bullets
     call fire_bullet
     expect bullets_damage, 1, 'new shots return to normal damage'
@@ -264,7 +264,7 @@ start:
     call activate_powerup_type
     expect player_boost_mask, BOOST_MASK_SPEED, 'speed pickup selects only movement boost'
     call move_player_right
-    expect player_x, 22, 'speed pickup doubles movement'
+    expect player_x, 20+PLAYER_BOOST_MOVE_STEP, 'speed pickup increases movement'
     call initialize_player
     call initialize_bullets
     mov byte [game_state], PLAYING

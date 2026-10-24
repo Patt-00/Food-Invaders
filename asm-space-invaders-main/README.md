@@ -2,6 +2,10 @@
 
 A 16-bit NASM game for 386-compatible real-mode DOS. `main.asm` renders colored ASCII in a 132 by 88 SVGA text screen. Eight-pixel cells produce a 1056 by 704 gameplay field with a 3:2 ratio. The playable build uses all ten ASCII designs from the team document: the Chef, five food enemies, Ratatouille, two weapons, and the fireball pickup. The main menu previews all ten designs at their source cell dimensions.
 
+## Gameplay reference
+
+Food Invaders takes its core gameplay idea from Space Invaders. A playable text-mode reference is [doctorfree/ninvaders at revision `dc38ab8`](https://github.com/doctorfree/ninvaders/tree/dc38ab8db9ecdb5f69fbd3b3deb42e253d6f08c3), an ncurses game with CMake build instructions. That revision built and entered gameplay in a Linux terminal and a Termux shell session on 2026-10-24. Food Invaders keeps its own 16-bit NASM DOSBox implementation and ASCII art.
+
 ## Build and run
 
 From this directory, build the game with NASM:
@@ -18,7 +22,7 @@ Run with **DOSBox-X** and the `machine=svga_s3` setting. The program sets custom
 
 | Key | Action |
 | --- | --- |
-| A/D or arrow keys | Move the chef |
+| A/D or arrow keys | Move the Chef three cells per keypress, or five with the speed boost |
 | Space | Fire a cleaver (one damage) |
 | X | Fire a rolling pin (two damage) |
 | Escape | Quit |
@@ -31,13 +35,17 @@ Run with **DOSBox-X** and the `machine=svga_s3` setting. The program sets custom
 
 The menu offers Easy, Normal, and Hard. Easy starts with five lives and lengthens enemy movement and firing delays by 50 percent. Normal starts with three lives and uses the stage delays. Hard starts with two lives and shortens both enemy delays by 25 percent.
 
-The Chef fires the full 12 by 16 cleaver design with Space and the full 12 by 16 rolling pin with X. Three player shots can be active at once, and the weapons share a cooldown. Cleavers fire every 24 game ticks and rolling pins every 40 ticks. Both travel two rows per update so shots stay visible long enough to overlap their firing cooldowns.
+The Chef fires the full 12 by 16 cleaver design with Space and the full 12 by 16 rolling pin with X. Three player shots can be active at once, and the weapons share a cooldown. Cleavers fire every 16 game ticks, or 0.8 seconds. Rolling pins fire every 28 ticks, or 1.4 seconds. Both travel two rows per update.
 
 Each enemy defeat has a one-in-four chance to drop the document's 14 by 18 fireball when no pickup is already falling. It falls one row every 200 milliseconds. Catching a green fireball increases movement speed. Catching a red fireball adds one damage per shot. Catching a yellow fireball shortens cooldowns and adds a second cleaver to each shot. Each effect lasts 80 game ticks. Distinct effects can overlap, and another pickup refreshes the timer. `activate_player_powerup` remains available to modules that need to activate all three effects together.
 
-The five food enemies use their documented source dimensions: the cupcake is 22 by 16, fries, hotdog, and pizza are 14 by 16, and the burger is 14 by 11. Ratatouille is 15 by 16. Each regular enemy gets a random destination, a movement delay, and, for hotdogs and pizzas, a separate firing timer. Five 26-cell columns and two 17-row vertical bands keep the full designs readable without sprite overlap. The front band starts at row 5; the rear band starts at row 24 and ends at row 41, leaving 30 rows before the Chef's initial top row. Each lane pair descends on its own stage- and difficulty-scaled timer, so enemies can eventually reach the footer without a synchronized formation step. The boss moves across the screen and selects vertical targets beginning at row 6. Clearing four stages leads to the 20-HP Ratatouille boss. Defeating it produces victory. Game-over and victory screens preview the Chef, Ratatouille, and fireball at native sizes, then show the score and restart or quit controls. Contact, hostile fire, and bottom breaches aggregate to at most one life loss per tick. Surviving enemies retain health and reset positions after a hit. The Chef receives one second of invulnerability. Life loss takes priority over a simultaneous stage clear.
+The four regular waves use named formations: Patrol, Flankers, Crossfire, and Last Stand. Each wave changes enemy order and lane shape. The shapes are flat, V, inverted V, and zigzag. Lane offsets stay within three rows, leaving at least 27 rows between the initial rear band and the Chef. Shooter types rotate among left, middle, and right lanes in every wave.
 
-Hostile shots use visible 2×2 red markers, move one row every 200 ms, and collide with the Chef's full 12 by 16 sprite bounds. The first overlap with the head, body, or side registers a hit. Each shot interval is randomized within a stage-dependent range so enemies do not create a steady synchronized stream.
+Enemies choose random destinations and independent movement timers. At Normal difficulty, movement delays are configured from 180 to 420 milliseconds in Patrol, then from 105 to 270 milliseconds in Last Stand. Stages three and four allow wider horizontal and vertical steps. Each shooter has a randomized firing delay, configured from 2.6 to 5 seconds in Patrol and from 1.55 to 2.9 seconds in Last Stand. Lane pairs descend on independent timers, configured from 4 to 8 seconds in Patrol and from 2.8 to 5.6 seconds in Last Stand. The 50 ms game tick quantizes these timers. Easy and Hard scale the delays.
+
+Hostile-shot delays are configured at 170 milliseconds in Patrol and 110 milliseconds in Last Stand. The 50 ms game tick quantizes each shot movement. The 20-HP Ratatouille boss appears on stage five. It moves faster and fires every 1.2 to 2.4 seconds, with a 90 ms hostile-shot delay. Defeating it produces victory. Game-over and victory screens preview the Chef, Ratatouille, and fireball at native sizes, then show the score and restart or quit controls. Contact, hostile fire, and bottom breaches aggregate to at most one life loss per tick. Surviving enemies retain health and reset positions after a hit. The Chef receives one second of invulnerability. Life loss takes priority over a simultaneous stage clear.
+
+Hostile shots use visible 2×2 red markers and collide with the Chef's full 12 by 16 sprite bounds. The first overlap with the head, body, or side registers a hit.
 
 ## Architecture and interfaces
 

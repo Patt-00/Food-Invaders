@@ -285,9 +285,10 @@ update_hostile_bullets:
  pushad
  call check_hostile_hits
  add dword [shot_timer],50
- cmp dword [shot_timer],HOSTILE_SHOT_STEP_MS
+ mov ecx,[enemy_shot_step_ms]
+ cmp [shot_timer],ecx
  jb .done
- sub dword [shot_timer],HOSTILE_SHOT_STEP_MS
+ sub [shot_timer],ecx
  mov esi,shots
  mov ecx,MAX_SHOTS
 .move:

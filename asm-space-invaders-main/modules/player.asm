@@ -61,14 +61,14 @@ update_player:
     ret
 
 ; Procedure: move_player_left
-; Purpose: Move one column left, or two during an active boost, without underflow.
+; Purpose: Move several columns left, with a longer step during a speed boost.
 ; Input: None. Output: player_x updated within the legal range.
 ; Modifies: AX, flags. Shared: player_x, player_boost_mask.
 move_player_left:
-    mov al, 1
+    mov al, PLAYER_MOVE_STEP
     test byte [player_boost_mask], BOOST_MASK_SPEED
     jz .move
-    inc al
+    mov al, PLAYER_BOOST_MOVE_STEP
 .move:
     cmp byte [player_x], SCREEN_WIDTH - PLAYER_WIDTH
     jbe .valid
@@ -83,22 +83,22 @@ move_player_left:
     ret
 
 ; Procedure: move_player_right
-; Purpose: Move one column right, or two during a boost, without sprite overflow.
+; Purpose: Move several columns right, with a longer step during a speed boost.
 ; Input: None. Output: player_x updated within the legal range.
 ; Modifies: AX, flags. Shared: player_x, player_boost_mask.
 move_player_right:
-    mov al, SCREEN_WIDTH - PLAYER_WIDTH - 1
+    mov al, PLAYER_MOVE_STEP
     test byte [player_boost_mask], BOOST_MASK_SPEED
     jz .normal
-    dec al
-    cmp [player_x], al
-    ja .edge
-    add byte [player_x], 2
-    ret
+    mov al, PLAYER_BOOST_MOVE_STEP
 .normal:
-    cmp [player_x], al
-    ja .edge
-    inc byte [player_x]
+    cmp byte [player_x], SCREEN_WIDTH - PLAYER_WIDTH
+    jae .edge
+    mov ah, SCREEN_WIDTH - PLAYER_WIDTH
+    sub ah, [player_x]
+    cmp ah, al
+    jbe .edge
+    add [player_x], al
     ret
 .edge:
     mov byte [player_x], SCREEN_WIDTH - PLAYER_WIDTH

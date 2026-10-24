@@ -56,14 +56,39 @@ random_attack_delay:
 
 ; random_enemy_lane_drop_interval(): scaled delay before one lane descends.
 random_enemy_lane_drop_interval:
- mov eax,ENEMY_LANE_DROP_MIN_MS
- mov ecx,ENEMY_LANE_DROP_RANGE_MS
+ mov eax,[enemy_lane_drop_min_interval]
+ mov ecx,[enemy_lane_drop_interval_range]
  call random_in_range
+ call scale_difficulty_interval
+ ret
+
+; random_enemy_move_interval(): select this wave's movement delay and difficulty.
+random_enemy_move_interval:
+ mov eax,[enemy_move_min_interval]
+ mov ecx,[enemy_move_interval_range]
+ call random_in_range
+ call scale_difficulty_interval
+ ret
+
+; get_formation_lane_offset(): EBX=enemy slot, EAX=wave-specific vertical offset.
+get_formation_lane_offset:
+ push ecx
+ push edx
+ mov eax,ebx
+ xor edx,edx
+ mov ecx,ENEMY_LANE_COUNT
+ div ecx
  mov ecx,[current_wave]
  dec ecx
- imul ecx,ENEMY_LANE_DROP_STAGE_ACCEL_MS
- sub eax,ecx
- call scale_difficulty_interval
+ cmp ecx,WAVE_REGULAR_COUNT-1
+ jbe .wave_ok
+ mov ecx,WAVE_REGULAR_COUNT-1
+.wave_ok:
+ imul ecx,ENEMY_LANE_COUNT
+ add ecx,edx
+ movzx eax,byte [formation_lane_offsets+ecx]
+ pop edx
+ pop ecx
  ret
 
 ; scale_difficulty_interval(): EAX=base delay; return adjusted delay.
@@ -111,6 +136,8 @@ choose_enemy_target:
  mov ecx,ENEMY_LANE_COUNT
  div ecx
  movzx ebp,byte [enemy_lane_descent+edx]
+ call get_formation_lane_offset
+ add ebp,eax
  imul edx,ENEMY_LANE_WIDTH
  add edx,(SCREEN_WIDTH-ENEMY_LANE_COUNT*ENEMY_LANE_WIDTH)/2
  mov ecx,ENEMY_LANE_WIDTH
@@ -200,22 +227,42 @@ initialize_enemies:
  div ecx
  test edx,edx
  jz .boss
- ; Stage scaling is capped so simulation never takes multi-cell steps.
+ ; Each wave advances movement, attack, and hostile-shot speed.
  mov eax,[current_wave]
  dec eax
- cmp eax,3
+ cmp eax,WAVE_REGULAR_COUNT-1
  jbe .scale
- mov eax,3
+ mov eax,WAVE_REGULAR_COUNT-1
 .scale:
  mov ecx,eax
- imul eax,150
- mov edx,3500
+ imul eax,ENEMY_ATTACK_STAGE_ACCEL_MS
+ mov edx,ENEMY_ATTACK_BASE_MIN_MS
  sub edx,eax
  mov [attack_min_interval],edx
- imul ecx,200
- mov eax,5000
- sub eax,ecx
- mov [attack_interval_range],eax
+ mov edx,ENEMY_ATTACK_BASE_RANGE_MS
+ sub edx,eax
+ mov [attack_interval_range],edx
+ mov eax,ecx
+ imul eax,ENEMY_LANE_DROP_STAGE_ACCEL_MS
+ mov edx,ENEMY_LANE_DROP_MIN_MS
+ sub edx,eax
+ mov [enemy_lane_drop_min_interval],edx
+ mov edx,ENEMY_LANE_DROP_RANGE_MS
+ sub edx,eax
+ mov [enemy_lane_drop_interval_range],edx
+ mov eax,ecx
+ imul eax,ENEMY_MOVE_STAGE_ACCEL_MS
+ mov edx,ENEMY_MOVE_BASE_MIN_MS
+ sub edx,eax
+ mov [enemy_move_min_interval],edx
+ mov edx,ENEMY_MOVE_BASE_RANGE_MS
+ sub edx,eax
+ mov [enemy_move_interval_range],edx
+ mov eax,ecx
+ imul eax,HOSTILE_SHOT_STAGE_ACCEL_MS
+ mov edx,HOSTILE_SHOT_BASE_MS
+ sub edx,eax
+ mov [enemy_shot_step_ms],edx
  mov dword [move_interval],300 ; Legacy field; live movement uses per-enemy random timers.
  mov dword [alive_count],MAX_ENEMIES
  xor ebx,ebx
@@ -228,11 +275,17 @@ initialize_enemies:
  xor ebx,ebx
  mov esi,enemies
 .regular:
- mov eax,ebx
- xor edx,edx
- mov ecx,ENEMY_LANE_COUNT
- div ecx
- mov [esi+E_TYPE],edx
+ mov eax,[current_wave]
+ dec eax
+ cmp eax,WAVE_REGULAR_COUNT-1
+ jbe .type_wave_ok
+ mov eax,WAVE_REGULAR_COUNT-1
+.type_wave_ok:
+ imul eax,MAX_ENEMIES
+ add eax,ebx
+ movzx eax,byte [formation_type_map+eax]
+ mov [esi+E_TYPE],eax
+ mov edx,eax
  imul edx,T_SIZE
  mov ecx,[type_table+edx+T_HP]
  mov [esi+E_HP],ecx
@@ -268,13 +321,13 @@ initialize_enemies:
  sub ecx,[type_table+edx+T_H]
  shr ecx,1
  add eax,ecx
- mov [esi+E_Y],eax
- mov [esi+E_SY],eax
+ mov edi,eax
+ call get_formation_lane_offset
+ add edi,eax
+ mov [esi+E_Y],edi
+ mov [esi+E_SY],edi
  mov dword [esi+E_ACTIVE],1
- mov eax,200
- mov ecx,501              ; Each enemy chooses a new 200-700 ms move delay.
- call random_in_range
- call scale_difficulty_interval
+ call random_enemy_move_interval
  mov [enemy_move_intervals+ebx*4],eax
  call choose_enemy_target
  mov eax,[esi+E_TYPE]
@@ -293,8 +346,11 @@ initialize_enemies:
  mov dword [boss_mode],1
  mov dword [alive_count],1
  mov dword [move_interval],200
- mov dword [attack_min_interval],1800
- mov dword [attack_interval_range],1400
+ mov dword [attack_min_interval],1200
+ mov dword [attack_interval_range],1201
+ mov dword [enemy_move_min_interval],90
+ mov dword [enemy_move_interval_range],181
+ mov dword [enemy_shot_step_ms],90
  mov dword [enemies+E_ACTIVE],1
  mov dword [enemies+E_TYPE],5
  mov dword [enemies+E_HP],20
@@ -305,10 +361,7 @@ initialize_enemies:
  xor ebx,ebx
  mov esi,enemies
  call choose_enemy_target
- mov eax,200
- mov ecx,401
- call random_in_range
- call scale_difficulty_interval
+ call random_enemy_move_interval
  mov [enemy_move_intervals],eax
  call random_attack_delay
  mov [enemy_fire_intervals],eax
@@ -585,6 +638,28 @@ fire_enemy_slot:
  pop ebx
  ret
 
+; Higher waves move farther on each randomly timed horizontal step.
+random_enemy_horizontal_step:
+ mov eax,1
+ mov ecx,3
+ cmp dword [current_wave],3
+ jb .roll
+ mov ecx,4
+.roll:
+ call random_in_range
+ ret
+
+; Higher waves also vary the size of vertical movement.
+random_enemy_vertical_step:
+ mov eax,1
+ mov ecx,2
+ cmp dword [current_wave],3
+ jb .roll
+ mov ecx,3
+.roll:
+ call random_in_range
+ ret
+
 ; update_enemies(): independently wander active enemies and schedule a random volley.
 update_enemies:
  pushad
@@ -615,9 +690,7 @@ update_enemies:
  cmp eax,edi
  je .move_y
  jb .x_right
- mov eax,1
- mov ecx,4
- call random_in_range
+ call random_enemy_horizontal_step
  mov edx,[esi+E_X]
  sub edx,eax
  jc .x_left_target
@@ -629,9 +702,7 @@ update_enemies:
  mov [esi+E_X],edx
  jmp .reschedule
 .x_right:
- mov eax,1
- mov ecx,4
- call random_in_range
+ call random_enemy_horizontal_step
  mov edx,[esi+E_X]
  add edx,eax
  cmp edx,edi
@@ -646,9 +717,7 @@ update_enemies:
  cmp eax,edi
  je .choose_target
  jb .y_down
- mov eax,1
- mov ecx,2
- call random_in_range
+ call random_enemy_vertical_step
  mov edx,[esi+E_Y]
  sub edx,eax
  jc .y_up_target
@@ -660,9 +729,7 @@ update_enemies:
  mov [esi+E_Y],edx
  jmp .reschedule
 .y_down:
- mov eax,1
- mov ecx,2
- call random_in_range
+ call random_enemy_vertical_step
  mov edx,[esi+E_Y]
  add edx,eax
  cmp edx,edi
@@ -680,10 +747,7 @@ update_enemies:
  jne .reschedule
  call choose_enemy_target
 .reschedule:
- mov eax,200
- mov ecx,501
- call random_in_range
- call scale_difficulty_interval
+ call random_enemy_move_interval
  mov [enemy_move_intervals+ebx*4],eax
 .fire_timer:
  mov eax,[esi+E_TYPE]

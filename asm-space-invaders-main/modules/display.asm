@@ -19,11 +19,18 @@ number_buffer times 12 db 0
 hud_score_text db 'SCORE:',0
 hud_lives_text db 'LIVES:',0
 hud_stage_text db 'STAGE:',0
+hud_wave_label db 'WAVE:',0
 hud_difficulty_text db 'DIFF:',0
 easy_text db 'EASY',0
 normal_text db 'NORMAL',0
 hard_text db 'HARD',0
 hud_boss_text db 'RATATOUILLE HP:',0
+wave_patrol_name db 'PATROL',0
+wave_flankers_name db 'FLANKERS',0
+wave_crossfire_name db 'CROSSFIRE',0
+wave_last_stand_name db 'LAST STAND',0
+wave_boss_name db 'RATATOUILLE',0
+wave_name_table dw wave_patrol_name,wave_flankers_name,wave_crossfire_name,wave_last_stand_name
 hud_ready_text db 'READY',0
 hud_wait_text db 'WAIT ',0
 hud_boost_text db 'BOOST',0
@@ -460,6 +467,23 @@ draw_hud:
  mov dl,55
  mov eax,[current_wave]
  call print_number32
+ mov bl,0Eh
+ mov dx,0101h
+ mov si,hud_wave_label
+ call print_string
+ mov dl,7
+ mov eax,[current_wave]
+ cmp eax,FINAL_STAGE
+ jae .boss_name
+ dec eax
+ shl eax,1
+ mov si,[wave_name_table+eax]
+ jmp .wave_name
+.boss_name:
+ mov si,wave_boss_name
+.wave_name:
+ call print_string
+ mov bl,0Fh
  mov dl,60
  mov si,hud_difficulty_text
  call print_string

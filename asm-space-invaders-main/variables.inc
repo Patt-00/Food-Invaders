@@ -12,7 +12,8 @@ WEAPON_HEIGHT   equ SOURCE_ART_HEIGHT
 BULLET_SPEED    equ 2        ; Keeps a shot in the shorter viewport through its cooldown.
 HOSTILE_SHOT_WIDTH equ 2
 HOSTILE_SHOT_HEIGHT equ 2
-HOSTILE_SHOT_STEP_MS equ 200 ; Enemy shots advance more slowly than each 50 ms game tick.
+PLAYER_MOVE_STEP equ 3       ; One key repeat moves far enough to cross the wide playfield.
+PLAYER_BOOST_MOVE_STEP equ 5
 PLAYER_HITBOX_X equ 0
 PLAYER_HITBOX_Y equ 0
 PLAYER_HITBOX_WIDTH equ PLAYER_WIDTH
@@ -42,16 +43,25 @@ PLAYER_HITBOX_HEIGHT equ PLAYER_HEIGHT
 MAX_BULLETS     equ 3
 CLEAVER         equ 0
 ROLLING_PIN     equ 1
-NORMAL_COOLDOWN equ 24        ; Frames; main loop waits roughly 50 ms.
-BOOST_COOLDOWN  equ 20
-SECONDARY_COOLDOWN equ 40   ; Stronger weapon: a slower two-second cadence.
-BOOST_SECONDARY_COOLDOWN equ 32
+NORMAL_COOLDOWN equ 16        ; 0.8 seconds at the 50 ms simulation tick.
+BOOST_COOLDOWN  equ 12
+SECONDARY_COOLDOWN equ 28    ; Stronger weapon: a slower 1.4 second cadence.
+BOOST_SECONDARY_COOLDOWN equ 20
 BOOST_BURST_COUNT equ 2
 BOOST_FRAMES    equ 80       ; Roughly four seconds.
 INITIAL_ENEMY_HEALTH equ 8   ; Eight cleavers or four rolling pins per demo enemy.
 PICKUP_STEP_TICKS equ 4      ; A falling pickup moves once every 200 ms.
 PICKUP_WIDTH equ 14
 PICKUP_HEIGHT equ 18
+
+ENEMY_MOVE_BASE_MIN_MS equ 180
+ENEMY_MOVE_BASE_RANGE_MS equ 241
+ENEMY_MOVE_STAGE_ACCEL_MS equ 25
+ENEMY_ATTACK_BASE_MIN_MS equ 2600
+ENEMY_ATTACK_BASE_RANGE_MS equ 2401
+ENEMY_ATTACK_STAGE_ACCEL_MS equ 350
+HOSTILE_SHOT_BASE_MS equ 170
+HOSTILE_SHOT_STAGE_ACCEL_MS equ 20
 
 %define DIFFICULTY_EASY 1
 %define DIFFICULTY_NORMAL 2
@@ -73,11 +83,25 @@ ENEMY_FRONT_BAND_HEIGHT equ 17
 ENEMY_REAR_TOP equ 24
 ENEMY_REAR_BAND_HEIGHT equ 17
 ENEMY_CHEF_GAP equ (SCREEN_HEIGHT - PLAYER_HEIGHT - 1) - (ENEMY_REAR_TOP + ENEMY_REAR_BAND_HEIGHT)
-ENEMY_LANE_DROP_MIN_MS equ 5000
-ENEMY_LANE_DROP_RANGE_MS equ 5001
-ENEMY_LANE_DROP_STAGE_ACCEL_MS equ 500
+FORMATION_MAX_OFFSET equ 3
+ENEMY_LANE_DROP_MIN_MS equ 4000
+ENEMY_LANE_DROP_RANGE_MS equ 4001
+ENEMY_LANE_DROP_STAGE_ACCEL_MS equ 400
 BOSS_MIN_Y equ 6
 BOSS_Y_RANGE equ 21
+
+; Four regular waves use different enemy orders and vertical lane shapes.
+WAVE_REGULAR_COUNT equ 4
+formation_type_map:
+    db 0,1,2,3,4, 3,2,4,0,1
+    db 1,0,3,2,4, 4,3,1,0,2
+    db 4,0,3,1,2, 1,4,2,0,3
+    db 2,4,0,3,1, 3,2,4,0,1
+formation_lane_offsets:
+    db 0,0,0,0,0
+    db 0,1,2,1,0
+    db 3,1,0,1,3
+    db 0,3,0,3,0
 
 %if ENEMY_LANE_WIDTH < ENEMY_WIDTH
     %error "Enemy lanes must fit the widest ASCII design"
@@ -85,14 +109,23 @@ BOSS_Y_RANGE equ 21
 %if ENEMY_FRONT_TOP + ENEMY_FRONT_BAND_HEIGHT > ENEMY_REAR_TOP
     %error "Regular enemy bands must not overlap"
 %endif
-%if ENEMY_REAR_TOP + ENEMY_REAR_BAND_HEIGHT > SCREEN_HEIGHT - PLAYER_HEIGHT - 1 - WEAPON_HEIGHT
+%if ENEMY_REAR_TOP + ENEMY_REAR_BAND_HEIGHT + FORMATION_MAX_OFFSET > SCREEN_HEIGHT - PLAYER_HEIGHT - 1 - WEAPON_HEIGHT
     %error "Rear enemies must leave room for a full-size player shot"
 %endif
-%if ENEMY_CHEF_GAP < 20
+%if ENEMY_CHEF_GAP - FORMATION_MAX_OFFSET < 20
     %error "Rear enemies must leave at least 20 rows before the Chef"
 %endif
 %if ENEMY_LANE_DROP_MIN_MS <= ENEMY_LANE_DROP_STAGE_ACCEL_MS * 3
     %error "Regular enemies must keep a positive lane-drop interval"
+%endif
+%if ENEMY_MOVE_BASE_MIN_MS <= ENEMY_MOVE_STAGE_ACCEL_MS * 3 || ENEMY_MOVE_BASE_RANGE_MS <= ENEMY_MOVE_STAGE_ACCEL_MS * 3
+    %error "Regular enemy movement intervals must stay positive"
+%endif
+%if ENEMY_ATTACK_BASE_MIN_MS <= ENEMY_ATTACK_STAGE_ACCEL_MS * 3 || ENEMY_ATTACK_BASE_RANGE_MS <= ENEMY_ATTACK_STAGE_ACCEL_MS * 3
+    %error "Regular enemy firing intervals must stay positive"
+%endif
+%if HOSTILE_SHOT_BASE_MS <= HOSTILE_SHOT_STAGE_ACCEL_MS * 3
+    %error "Regular hostile-shot steps must stay positive"
 %endif
 
 %define LEFT 0
@@ -177,6 +210,11 @@ move_interval dd 300
 attack_interval dd 1200
 attack_min_interval dd 1800
 attack_interval_range dd 1800
+enemy_lane_drop_min_interval dd ENEMY_LANE_DROP_MIN_MS
+enemy_lane_drop_interval_range dd ENEMY_LANE_DROP_RANGE_MS
+enemy_move_min_interval dd ENEMY_MOVE_BASE_MIN_MS
+enemy_move_interval_range dd ENEMY_MOVE_BASE_RANGE_MS
+enemy_shot_step_ms dd HOSTILE_SHOT_BASE_MS
 shooter_cursor dd 0
 enemy_events dd 0
 loss_pending dd 0
