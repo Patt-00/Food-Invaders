@@ -31,7 +31,7 @@ menu_quit_text db 'Q OR ESC: QUIT',0
 controls_text db 'A/D OR ARROWS: MOVE',0
 weapons_text db 'SPACE: CLEAVER     X: ROLLING PIN',0
 powerup_text db 'CATCH A FALLING FIREBALL FOR A TEMPORARY BOOST',0
-details_text db 'ENEMIES ROAM THE MAP; MORE SHOOTERS JOIN EACH WAVE',0
+details_text db 'ALL MONSTERS FIRE ON RANDOM TIMERS; WAVES SPEED UP',0
 boss_text db 'CLEAR FOUR STAGES, THEN DEFEAT RATATOUILLE (20 HP)',0
 over_hint_text db 'R/SPACE: restart  1-3: difficulty  Q/ESC: quit',0
 difficulty_text db 'DIFFICULTY: 1 EASY  2 NORMAL  3 HARD',0
@@ -139,82 +139,82 @@ show_main_menu:
  popad
  ret
 
-; Draw the ASCII assets at half size as a title-screen preview.
+; Draw the compact ASCII assets as a title-screen preview.
 draw_menu_preview:
  pushad
  ; Five regular invaders, spaced only for the title-screen art preview.
  mov eax,(SCREEN_WIDTH-MENU_ENEMY_PREVIEW_COUNT*MENU_ENEMY_PREVIEW_WIDTH)/2 + (MENU_ENEMY_PREVIEW_WIDTH-11)/2
  mov edx,MENU_ENEMY_ROW
  mov esi,art_cupcake
- mov ecx,22
- mov ebp,16
+ mov ecx,11
+ mov ebp,8
  mov bl,0Dh
- call draw_halfscale_art
+ call draw_rectangle_art
  mov eax,(SCREEN_WIDTH-MENU_ENEMY_PREVIEW_COUNT*MENU_ENEMY_PREVIEW_WIDTH)/2 + MENU_ENEMY_PREVIEW_WIDTH + (MENU_ENEMY_PREVIEW_WIDTH-7)/2
  mov edx,MENU_ENEMY_ROW
  mov esi,art_fries
- mov ecx,14
- mov ebp,16
+ mov ecx,7
+ mov ebp,8
  mov bl,0Eh
- call draw_halfscale_art
+ call draw_rectangle_art
  mov eax,(SCREEN_WIDTH-MENU_ENEMY_PREVIEW_COUNT*MENU_ENEMY_PREVIEW_WIDTH)/2 + MENU_ENEMY_PREVIEW_WIDTH*2 + (MENU_ENEMY_PREVIEW_WIDTH-7)/2
  mov edx,MENU_ENEMY_ROW+(8-6)/2
  mov esi,art_burger
- mov ecx,14
- mov ebp,11
+ mov ecx,7
+ mov ebp,6
  mov bl,0Bh
- call draw_halfscale_art
+ call draw_rectangle_art
  mov eax,(SCREEN_WIDTH-MENU_ENEMY_PREVIEW_COUNT*MENU_ENEMY_PREVIEW_WIDTH)/2 + MENU_ENEMY_PREVIEW_WIDTH*3 + (MENU_ENEMY_PREVIEW_WIDTH-7)/2
  mov edx,MENU_ENEMY_ROW
  mov esi,art_hotdog
- mov ecx,14
- mov ebp,16
+ mov ecx,7
+ mov ebp,8
  mov bl,0Ch
- call draw_halfscale_art
+ call draw_rectangle_art
  mov eax,(SCREEN_WIDTH-MENU_ENEMY_PREVIEW_COUNT*MENU_ENEMY_PREVIEW_WIDTH)/2 + MENU_ENEMY_PREVIEW_WIDTH*4 + (MENU_ENEMY_PREVIEW_WIDTH-7)/2
  mov edx,MENU_ENEMY_ROW
  mov esi,art_pizza
- mov ecx,14
- mov ebp,16
+ mov ecx,8
+ mov ebp,8
  mov bl,0Ah
- call draw_halfscale_art
+ call draw_rectangle_art
 
  ; Boss, weapons, Chef and power-up preview below the enemy row.
  mov eax,16
  mov edx,MENU_SHOWCASE_ROW
  mov esi,art_rat
- mov ecx,15
- mov ebp,16
+ mov ecx,8
+ mov ebp,8
  mov bl,0Fh
- call draw_halfscale_art
+ call draw_rectangle_art
  mov eax,39
  mov edx,MENU_SHOWCASE_ROW
  mov esi,cleaver_art
- mov ecx,SOURCE_ART_WIDTH
- mov ebp,SOURCE_ART_HEIGHT
+ mov ecx,WEAPON_WIDTH
+ mov ebp,WEAPON_HEIGHT
  mov bl,0Bh
- call draw_halfscale_art
+ call draw_rectangle_art
  mov eax,(SCREEN_WIDTH-PLAYER_WIDTH)/2
  mov edx,MENU_SHOWCASE_ROW
  mov esi,player_art
- mov ecx,SOURCE_ART_WIDTH
- mov ebp,SOURCE_ART_HEIGHT
+ mov ecx,PLAYER_WIDTH
+ mov ebp,PLAYER_HEIGHT
  mov bl,0Fh
- call draw_halfscale_art
+ call draw_rectangle_art
  mov eax,81
  mov edx,MENU_SHOWCASE_ROW
  mov esi,rolling_pin_art
- mov ecx,SOURCE_ART_WIDTH
- mov ebp,SOURCE_ART_HEIGHT
+ mov ecx,WEAPON_WIDTH
+ mov ebp,WEAPON_HEIGHT
  mov bl,0Eh
- call draw_halfscale_art
+ call draw_rectangle_art
  mov eax,103
  mov edx,MENU_SHOWCASE_ROW-1
  mov esi,art_fireball
- mov ecx,SOURCE_PICKUP_WIDTH
- mov ebp,SOURCE_PICKUP_HEIGHT
+ mov ecx,PICKUP_WIDTH
+ mov ebp,PICKUP_HEIGHT
  mov bl,0Eh
- call draw_halfscale_art
+ call draw_rectangle_art
  popad
  ret
 
@@ -290,30 +290,30 @@ show_victory:
  popad
  ret
 
-; Result screens reuse the half-size ASCII art shown during gameplay.
+; Result screens reuse the compact ASCII art shown during gameplay.
 draw_result_preview:
  pushad
  mov eax,36
  mov edx,RESULT_ART_ROW
  mov esi,art_rat
- mov ecx,15
- mov ebp,16
+ mov ecx,8
+ mov ebp,8
  mov bl,0Fh
- call draw_halfscale_art
+ call draw_rectangle_art
  mov eax,60
  mov edx,RESULT_ART_ROW
  mov esi,player_art
- mov ecx,SOURCE_ART_WIDTH
- mov ebp,SOURCE_ART_HEIGHT
+ mov ecx,PLAYER_WIDTH
+ mov ebp,PLAYER_HEIGHT
  mov bl,0Fh
- call draw_halfscale_art
+ call draw_rectangle_art
  mov eax,83
  mov edx,RESULT_ART_ROW-1
  mov esi,art_fireball
- mov ecx,SOURCE_PICKUP_WIDTH
- mov ebp,SOURCE_PICKUP_HEIGHT
+ mov ecx,PICKUP_WIDTH
+ mov ebp,PICKUP_HEIGHT
  mov bl,0Eh
- call draw_halfscale_art
+ call draw_rectangle_art
  mov bl,0Fh
  mov dh,RESULT_ART_LABEL_ROW
  mov dl,38

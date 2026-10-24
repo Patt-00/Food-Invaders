@@ -14,7 +14,6 @@ render_x dd 0
 render_y dd 0
 render_width dd 0
 render_rows dd 0
-render_source_width dd 0
 render_column dd 0
 number_buffer times 12 db 0
 hud_score_text db 'SCORE:',0
@@ -255,47 +254,6 @@ draw_rectangle_art:
  popad
  ret
 
-; EAX=x, EDX=y, ESI=source art, ECX=source width, EBP=source height, BL=color.
-; Draw every other source cell and row, reducing character art to half size.
-draw_halfscale_art:
- pushad
- movzx esi,si
- mov [render_x],eax
- mov [render_y],edx
- mov [render_source_width],ecx
- inc ecx
- shr ecx,1
- mov [render_width],ecx
- mov eax,ebp
- inc eax
- shr eax,1
- mov [render_rows],eax
- mov bh,bl
-.row:
- mov dword [render_column],0
-.column:
- mov bl,[esi]
- mov eax,[render_x]
- add eax,[render_column]
- mov edx,[render_y]
- call draw_cell
- add esi,2
- inc dword [render_column]
- mov eax,[render_width]
- cmp [render_column],eax
- jb .column
- test dword [render_source_width],1
- jz .next_source_row
- dec esi
-.next_source_row:
- mov eax,[render_source_width]
- add esi,eax
- inc dword [render_y]
- dec dword [render_rows]
- jnz .row
- popad
- ret
-
 draw_enemy:
  pushad
  mov edi,enemies
@@ -309,12 +267,12 @@ draw_enemy:
  imul edx,T_SIZE
  lea ebx,[type_table+edx]
  mov esi,[ebx+T_ART]
- movzx ecx,byte [enemy_source_widths+eax]
- movzx ebp,byte [enemy_source_heights+eax]
+ mov ecx,[ebx+T_W]
+ mov ebp,[ebx+T_H]
  mov ebx,[ebx+T_COLOR]
  mov eax,[edi+E_X]
  mov edx,[edi+E_Y]
- call draw_halfscale_art
+ call draw_rectangle_art
  pop ecx
 .next:
  add edi,E_SIZE
@@ -378,19 +336,19 @@ draw_sprite:
 
 ; -------------------------------------------------
 ; Procedure: draw_weapon_sprite
-; Purpose: Draw the document's 12x16 weapon designs at half size.
+; Purpose: Draw the compact 6x8 weapon art.
 ; Input: DS:SI=source art, DH=row, DL=column, BL=color.
-; Output: Every other source row and column is rendered into a text cell.
+; Output: Every compact ASCII cell is rendered at the player's position.
 ; Modifies: Flags only; all general-purpose registers preserved.
-; Shared: render_buffer. Chef and enemies use the half-scale art renderer.
+; Shared: render_buffer. Chef and enemies use the same rectangle renderer.
 ; -------------------------------------------------
 draw_weapon_sprite:
     pushad
     movzx eax,dl
     movzx edx,dh
-    mov ecx,SOURCE_ART_WIDTH
-    mov ebp,SOURCE_ART_HEIGHT
-    call draw_halfscale_art
+    mov ecx,WEAPON_WIDTH
+    mov ebp,WEAPON_HEIGHT
+    call draw_rectangle_art
     popad
     ret
 
@@ -402,10 +360,10 @@ draw_player:
  movzx eax,byte [player_x]
  movzx edx,byte [player_y]
  mov esi,player_art
- mov ecx,SOURCE_ART_WIDTH
- mov ebp,SOURCE_ART_HEIGHT
+ mov ecx,PLAYER_WIDTH
+ mov ebp,PLAYER_HEIGHT
  mov bl,0Fh
- call draw_halfscale_art
+ call draw_rectangle_art
 .done:
  popad
  ret
@@ -595,8 +553,8 @@ draw_pickup:
  movzx eax,byte [pickup_x]
  movzx edx,byte [pickup_y]
  mov esi,art_fireball
- mov ecx,SOURCE_PICKUP_WIDTH
- mov ebp,SOURCE_PICKUP_HEIGHT
+ mov ecx,PICKUP_WIDTH
+ mov ebp,PICKUP_HEIGHT
  mov ebx,0Eh                ; Yellow marks rapid fire.
  cmp byte [pickup_kind],POWERUP_SPEED
  jne .damage
@@ -607,7 +565,7 @@ draw_pickup:
  jne .draw
  mov ebx,0Ch                ; Red marks the damage pickup.
 .draw:
- call draw_halfscale_art
+ call draw_rectangle_art
 .done:
  popad
  ret

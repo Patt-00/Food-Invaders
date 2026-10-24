@@ -1,6 +1,6 @@
 # Food Invaders
 
-Food Invaders is a 16-bit NASM game for 386-compatible real-mode DOS. You play as the Chef and defend the kitchen from food-themed invaders with a cleaver and rolling pin. The 132 by 88 SVGA text board launches full-screen in DOSBox-X and preserves its 3:2 shape. The Chef, enemies, weapons, and pickups render at half their source artwork dimensions.
+Food Invaders is a 16-bit NASM game for 386-compatible real-mode DOS. You play as the Chef and defend the kitchen from food-themed invaders with a cleaver and rolling pin. The 132 by 88 SVGA text board launches full-screen in DOSBox-X and preserves its 3:2 shape. Compact ASCII redraws keep each character recognizable at a smaller size.
 
 ## Run on Linux
 
@@ -34,7 +34,7 @@ The game uses DOSBox-X's SVGA S3 mode. Its launcher fills the Termux:X11 display
 | R | Restart after a result screen |
 | Q or Escape | Quit |
 
-The four regular waves place enemies at random positions across the playfield. Each enemy then takes independent random steps on both axes, avoids the other enemies, and stays above a safety line eight rows above the Chef. Later waves add shooters and increase movement and bullet speed. A 20 HP Ratatouille boss follows the fourth wave. Enemy bullets use a single text cell and move once every 50 to 80 milliseconds, depending on the wave; the 50 ms game tick sets the fastest rate.
+The four regular waves place enemies at random positions across the playfield. Each enemy takes independent random steps on both axes, avoids the others, stays above the Chef's safety line, and can fire on its own random timer. Later waves increase movement and firing speed. A 20 HP Ratatouille boss follows the fourth wave. Enemy bullets use a single text cell; the fireball power-up drops one row every 50 ms.
 
 ## Project details
 

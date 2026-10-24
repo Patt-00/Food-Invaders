@@ -29,7 +29,7 @@ PLAYER_HITBOX_HEIGHT equ PLAYER_HEIGHT
     %error "Text frame must fit in VGA text memory"
 %endif
 
-; Character art is drawn at half its document width and height.
+; Gameplay hitboxes use compact bounds at half the source-art dimensions.
 %if PLAYER_WIDTH * 2 != SOURCE_ART_WIDTH || PLAYER_HEIGHT * 2 != SOURCE_ART_HEIGHT
     %error "Chef dimensions must be half the source artwork"
 %endif
@@ -52,7 +52,7 @@ BOOST_SECONDARY_COOLDOWN equ 20
 BOOST_BURST_COUNT equ 2
 BOOST_FRAMES    equ 80       ; Roughly four seconds.
 INITIAL_ENEMY_HEALTH equ 8   ; Eight cleavers or four rolling pins per demo enemy.
-PICKUP_STEP_TICKS equ 4      ; A falling pickup moves once every 200 ms.
+PICKUP_STEP_TICKS equ 1      ; A falling pickup moves once every 50 ms.
 PICKUP_WIDTH equ 7
 PICKUP_HEIGHT equ 9
 %if PICKUP_WIDTH * 2 != SOURCE_PICKUP_WIDTH || PICKUP_HEIGHT * 2 != SOURCE_PICKUP_HEIGHT
@@ -79,8 +79,8 @@ HOSTILE_SHOT_STAGE_ACCEL_MS equ 15
 %define POWERUP_DAMAGE 2
 %define POWERUP_RAPID 3
 
-ENEMY_WIDTH     equ 11       ; Widest half-scale design: the cupcake.
-ENEMY_HEIGHT    equ 8        ; Tallest half-scale food enemy.
+ENEMY_WIDTH     equ 11       ; Widest compact design: the cupcake.
+ENEMY_HEIGHT    equ 8        ; Tallest compact food enemy.
 MENU_ENEMY_PREVIEW_COUNT equ 5
 MENU_ENEMY_PREVIEW_WIDTH equ (SCREEN_WIDTH / MENU_ENEMY_PREVIEW_COUNT)
 ; Enemies roam the full field but stop above the Chef's safe area.
@@ -91,14 +91,13 @@ ENEMY_RANDOM_STEP_TRIES equ 12
 enemy_move_step_x_by_wave db 4,6,8,10
 enemy_move_step_y_by_wave db 2,3,4,5
 
-; Four regular waves use different enemy orders and attacker counts.
+; Four regular waves use different enemy orders.
 WAVE_REGULAR_COUNT equ 4
 wave_enemy_type_map:
     db 0,1,2,3,4, 3,2,4,0,1
     db 1,0,3,2,4, 4,3,1,0,2
     db 4,0,3,1,2, 1,4,2,0,3
     db 2,4,0,3,1, 3,2,4,0,1
-wave_extra_shooter_masks dd 0,1,0Ah,15h
 
 %if ENEMY_BREACH_LINE <= PLAYFIELD_TOP + 1 + ENEMY_HEIGHT
     %error "Enemies need a safe movement area above the Chef"
@@ -143,10 +142,9 @@ wave_extra_shooter_masks dd 0,1,0Ah,15h
 %define T_W 4
 %define T_H 8
 %define T_SCORE 12
-%define T_SHOOT 16
-%define T_ART 20
-%define T_COLOR 24
-%define T_SIZE 28
+%define T_ART 16
+%define T_COLOR 20
+%define T_SIZE 24
 %define S_ACTIVE 0
 %define S_X 4
 %define S_Y 8

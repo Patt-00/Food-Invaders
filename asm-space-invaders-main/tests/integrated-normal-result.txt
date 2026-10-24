@@ -1,4 +1,4 @@
 DOSBox-X 2026.10.01, 386 CPU, normal core
-PASS: 43533 assertions (real mode, 32-bit calculations)
+PASS: 43538 assertions (real mode, 32-bit calculations)
 PASS: Food Invaders player, dual weapons, boosts and collision tests
 PASS: collision geometry, damage, priority, guards and registers

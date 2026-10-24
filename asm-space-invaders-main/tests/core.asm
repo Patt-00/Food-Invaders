@@ -1,12 +1,8 @@
 section .data
-%include "assets/source_art.inc"
-source_enemy_art_pointers dd source_cupcake_art,source_fries_art,source_burger_art
-                         dd source_hotdog_art,source_pizza_art,source_rat_art
-test_art_source_width dd 0
-test_art_output_width dd 0
-test_art_source_row dd 0
-test_art_source_column dd 0
-test_art_output_rows dd 0
+%include "tests/compact_art_reference.inc"
+test_enemy_art_pointers dd test_cupcake_art,test_fries_art,test_burger_art
+                       dd test_hotdog_art,test_pizza_art,test_rat_art
+test_art_width dd 0
 test_art_type dd 0
 test_spawn_min_y dd 0
 test_spawn_max_y dd 0
@@ -54,12 +50,12 @@ tests_start:
  check byte [player_lives],3,'starting lives'
  check dword [enemies+2*E_SIZE+E_HP],2,'burger HP'
  check dword [enemies+4*E_SIZE+E_HP],2,'pizza HP'
- ; Each wave scatters enemies across the field and adds active shooters.
+ ; Each wave scatters the field and gives all monsters independent fire timers.
  mov dword [random_state],0x12345678
  call initialize_enemies
  call verify_enemy_scatter
  call get_test_shooter_count
- check eax,4,'stage 1 has four shooters'
+ check eax,10,'stage 1 enables firing for every monster'
  check dword [attack_min_interval],2600,'stage 1 attack cadence'
  check dword [enemy_move_min_interval],120,'stage 1 movement cadence'
  check dword [enemy_shot_step_ms],80,'stage 1 hostile-shot speed'
@@ -75,7 +71,7 @@ tests_start:
  call initialize_enemies
  call verify_enemy_scatter
  call get_test_shooter_count
- check eax,5,'stage 2 adds a shooter'
+ check eax,10,'stage 2 keeps every monster armed'
  check dword [attack_min_interval],2250,'stage 2 attack cadence increases'
  check dword [enemy_move_min_interval],100,'stage 2 movement cadence increases'
  check dword [enemy_shot_step_ms],65,'stage 2 hostile shots speed up'
@@ -93,7 +89,7 @@ tests_start:
  call initialize_enemies
  call verify_enemy_scatter
  call get_test_shooter_count
- check eax,6,'stage 3 adds another shooter'
+ check eax,10,'stage 3 keeps every monster armed'
  check dword [attack_min_interval],1900,'stage 3 attack cadence increases'
  check dword [enemy_move_min_interval],80,'stage 3 movement cadence increases'
  check dword [enemy_shot_step_ms],50,'stage 3 hostile shots speed up'
@@ -107,7 +103,7 @@ tests_start:
  call initialize_enemies
  call verify_enemy_scatter
  call get_test_shooter_count
- check eax,7,'stage 4 has the most shooters'
+ check eax,10,'stage 4 keeps every monster armed'
  check dword [attack_min_interval],1550,'stage 4 attack cadence increases'
  check dword [enemy_move_min_interval],60,'stage 4 movement cadence increases'
  check dword [enemy_shot_step_ms],35,'stage 4 hostile shots speed up'
@@ -272,8 +268,35 @@ tests_start:
  call spawn_enemy_projectile
  add esp,8
  check eax,0,'negative projectile rejected'
- ; Shooters can fire from their randomized map positions.
+ ; A type that previously could not shoot can now fire from its random position.
  call initialize_game
+ mov ebx,0
+ call fire_enemy_slot
+ check dword [shots+S_ACTIVE],1,'cupcake can fire a hostile shot'
+ mov esi,shots
+ call test_shot_matches_attacker
+ setc al
+ check al,0,'cupcake shot starts at its current position'
+ call clear_projectiles
+ check byte [enemy_shoot_enabled],1,'cupcake has an enabled firing timer'
+ mov eax,[enemy_fire_intervals]
+ cmp eax,2600
+ jae .cupcake_delay_min
+ check eax,2600,'cupcake receives a randomized firing delay'
+.cupcake_delay_min:
+ cmp eax,5001
+ jb .cupcake_delay_ok
+ check eax,5000,'cupcake randomized firing delay stays in range'
+.cupcake_delay_ok:
+ sub eax,50
+ mov [enemy_fire_timers],eax
+ call update_enemies
+ check dword [shots+S_ACTIVE],1,'cupcake timer expiration fires a shot'
+ mov esi,shots
+ call test_shot_matches_attacker
+ setc al
+ check al,0,'timed cupcake shot matches its source monster'
+ call clear_projectiles
  mov ebx,3
  call fire_enemy_slot
  check dword [shots+S_ACTIVE],1,'first randomized attacker fires'
@@ -359,7 +382,7 @@ tests_start:
  mov dword [enemies+E_Y],TOP
  call fire_enemy
  check dword [shots+S_X],RIGHT-4,'boss shot centered'
- check dword [shots+S_Y],TOP+ENEMY_HEIGHT,'boss shot below half-size art'
+ check dword [shots+S_Y],TOP+ENEMY_HEIGHT,'boss shot below compact art'
  push dword 20
  push dword 0
  call apply_enemy_damage
@@ -455,16 +478,16 @@ tests_start:
  call show_main_menu
  check word [back_buffer+(MENU_TITLE_ROW*SCREEN_WIDTH+TEST_MENU_TITLE_X)*2],0A46h,'Food Invaders menu title'
  check word [back_buffer+(MENU_DIFFICULTY_ROW*SCREEN_WIDTH+TEST_MENU_DIFFICULTY_X)*2],0E44h,'menu explains selectable difficulty'
- check word [back_buffer+(MENU_ENEMY_ROW*SCREEN_WIDTH+12)*2],0D23h,'menu previews half-size cupcake art'
- check word [back_buffer+(MENU_ENEMY_ROW*SCREEN_WIDTH+37)*2],0E23h,'menu previews half-size fries art'
- check word [back_buffer+((MENU_ENEMY_ROW+1)*SCREEN_WIDTH+62)*2],0B23h,'menu previews half-size burger art'
- check word [back_buffer+(MENU_ENEMY_ROW*SCREEN_WIDTH+89)*2],0C23h,'menu previews half-size hotdog art'
- check word [back_buffer+(MENU_ENEMY_ROW*SCREEN_WIDTH+114)*2],0A23h,'menu previews half-size pizza art'
+ check word [back_buffer+(MENU_ENEMY_ROW*SCREEN_WIDTH+11)*2],0D2Eh,'menu previews compact cupcake detail'
+ check word [back_buffer+(MENU_ENEMY_ROW*SCREEN_WIDTH+37)*2],0E23h,'menu previews compact fries art'
+ check word [back_buffer+((MENU_ENEMY_ROW+1)*SCREEN_WIDTH+62)*2],0B2Eh,'menu previews burger top detail'
+ check word [back_buffer+(MENU_ENEMY_ROW*SCREEN_WIDTH+88)*2],0C2Eh,'menu previews hotdog top detail'
+ check word [back_buffer+(MENU_ENEMY_ROW*SCREEN_WIDTH+117)*2],0A2Fh,'menu previews pizza edge detail'
  check word [back_buffer+(MENU_SHOWCASE_ROW*SCREEN_WIDTH+16)*2],0F23h,'menu previews Ratatouille ASCII art'
- check word [back_buffer+(MENU_SHOWCASE_ROW*SCREEN_WIDTH+44)*2],0B23h,'menu previews cleaver ASCII art'
- check word [back_buffer+(MENU_SHOWCASE_ROW*SCREEN_WIDTH+64)*2],0F23h,'menu previews half-size Chef art'
- check word [back_buffer+(MENU_SHOWCASE_ROW*SCREEN_WIDTH+83)*2],0E23h,'menu previews half-size rolling pin art'
- check word [back_buffer+((MENU_SHOWCASE_ROW-1)*SCREEN_WIDTH+106)*2],0E23h,'menu previews half-size fireball art'
+ check word [back_buffer+(MENU_SHOWCASE_ROW*SCREEN_WIDTH+41)*2],0B23h,'menu previews compact cleaver blade'
+ check word [back_buffer+(MENU_SHOWCASE_ROW*SCREEN_WIDTH+64)*2],0F2Eh,'menu previews Chef hat detail'
+ check word [back_buffer+(MENU_SHOWCASE_ROW*SCREEN_WIDTH+81)*2],0E23h,'menu previews compact rolling pin'
+ check word [back_buffer+((MENU_SHOWCASE_ROW-1)*SCREEN_WIDTH+106)*2],0E5Eh,'menu previews fireball flame detail'
  mov ah,05h
  mov cx,0231h                 ; BIOS enqueue '1': Easy.
  int 16h
@@ -502,24 +525,24 @@ tests_start:
  mov dword [enemies+E_SX],0
  mov dword [enemies+E_SY],5
  call draw_game
- check word [back_buffer+(5*SCREEN_WIDTH+4)*2],0D23h,'half-size cupcake art drawn at an arbitrary position'
- check word [back_buffer+(TEST_PLAYER_Y*SCREEN_WIDTH+TEST_PLAYER_X+2)*2],0F23h,'chef drawn in player area'
+ check word [back_buffer+(5*SCREEN_WIDTH+3)*2],0D2Eh,'compact cupcake detail drawn at an arbitrary position'
+ check word [back_buffer+(TEST_PLAYER_Y*SCREEN_WIDTH+TEST_PLAYER_X+2)*2],0F2Dh,'chef drawn in player area'
  push es
  mov ax,0B800h
  mov es,ax
- mov ax,[es:(5*SCREEN_WIDTH+4)*2]
+ mov ax,[es:(5*SCREEN_WIDTH+3)*2]
  pop es
- check ax,0D23h,'VGA memory contains rendered cupcake artwork'
+ check ax,0D2Eh,'VGA memory contains rendered compact artwork'
  mov byte [pickup_active],1
  mov byte [pickup_kind],POWERUP_SPEED
  mov byte [pickup_x],40
  mov byte [pickup_y],50
  call clear_screen
  call draw_pickup
- mov esi,source_fireball_art
+ mov esi,test_fireball_art
  mov edi,back_buffer+(50*SCREEN_WIDTH+40)*2
- mov ecx,SOURCE_PICKUP_WIDTH
- mov ebp,SOURCE_PICKUP_HEIGHT
+ mov ecx,PICKUP_WIDTH
+ mov ebp,PICKUP_HEIGHT
  mov bl,0Ah
  call verify_art_rows
  inc dword [test_count]
@@ -552,12 +575,12 @@ tests_start:
  add eax,[enemies+E_X]
  shl eax,1
  mov dx,[back_buffer+eax]
- check dx,0F23h,'half-size Ratatouille art renders at its randomized position'
+ check dx,0F23h,'compact Ratatouille art renders at its randomized position'
  call show_game_over
  check word [back_buffer+(RESULT_TITLE_ROW*SCREEN_WIDTH+TEST_GAMEOVER_TITLE_X)*2],0C47h,'game over title is centered'
  check word [back_buffer+(RESULT_ART_ROW*SCREEN_WIDTH+36)*2],0F23h,'game over previews Ratatouille art'
- check word [back_buffer+(RESULT_ART_ROW*SCREEN_WIDTH+62)*2],0F23h,'game over previews Chef art'
- check word [back_buffer+((RESULT_ART_ROW-1)*SCREEN_WIDTH+86)*2],0E23h,'game over previews fireball art'
+ check word [back_buffer+(RESULT_ART_ROW*SCREEN_WIDTH+62)*2],0F2Dh,'game over previews Chef art'
+ check word [back_buffer+((RESULT_ART_ROW-1)*SCREEN_WIDTH+86)*2],0E5Eh,'game over previews fireball art'
  mov dword [score],1220
  call show_victory
  check word [back_buffer+(RESULT_TITLE_ROW*SCREEN_WIDTH+TEST_VICTORY_TITLE_X)*2],0A4Bh,'victory title is centered'
@@ -661,9 +684,9 @@ verify_enemy_art_collection:
  call draw_enemy
  mov eax,ebx
  imul eax,T_SIZE
- movzx ecx,byte [enemy_source_widths+ebx]
- movzx ebp,byte [enemy_source_heights+ebx]
- mov esi,[source_enemy_art_pointers+ebx*4]
+ mov ecx,[type_table+eax+T_W]
+ mov ebp,[type_table+eax+T_H]
+ mov esi,[test_enemy_art_pointers+ebx*4]
  mov bl,[type_table+eax+T_COLOR]
  mov edi,back_buffer+(20*SCREEN_WIDTH+10)*2
  call verify_art_rows
@@ -972,42 +995,27 @@ test_failed:
  mov ax,4C01h
  int 21h
 
-; Compare the half-scale sample of DS:ESI with rendered words at ES:EDI.
-; ECX/EBP are source dimensions; BL is the expected color.
+; Compare a compact ASCII sprite from DS:ESI with rendered words at ES:EDI.
+; ECX/EBP are the rendered width and height; BL is the expected color.
 verify_art_rows:
  pushad
- mov [test_art_source_width],ecx
- inc ecx
- shr ecx,1
- mov [test_art_output_width],ecx
- mov eax,ebp
- inc eax
- shr eax,1
- mov [test_art_output_rows],eax
- mov dword [test_art_source_row],0
+ mov [test_art_width],ecx
 .row:
- mov dword [test_art_source_column],0
- mov ecx,[test_art_output_width]
+ mov ecx,[test_art_width]
 .cell:
- mov eax,[test_art_source_row]
- mov edx,[test_art_source_width]
- imul eax,edx
- add eax,[test_art_source_column]
- mov al,[esi+eax]
+ lodsb
  mov ah,bl
  cmp word [edi],ax
  jne .bad
  add edi,2
- add dword [test_art_source_column],2
  dec ecx
  jnz .cell
- mov eax,[test_art_output_width]
+ mov eax,[test_art_width]
  shl eax,1
  mov edx,SCREEN_WIDTH*2
  sub edx,eax
  add edi,edx
- add dword [test_art_source_row],2
- dec dword [test_art_output_rows]
+ dec ebp
  jnz .row
  popad
  ret

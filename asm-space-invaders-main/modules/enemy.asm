@@ -360,33 +360,13 @@ initialize_enemies:
  mov ecx,[type_table+edx+T_HP]
  mov [esi+E_HP],ecx
 
- ; Later waves add shooters with distinct enemy art.
- mov eax,[esi+E_TYPE]
- imul eax,T_SIZE
- mov edx,[type_table+eax+T_SHOOT]
- mov [enemy_shoot_enabled+ebx],dl
- mov eax,[current_wave]
- dec eax
- cmp eax,WAVE_REGULAR_COUNT-1
- jbe .bonus_wave_ok
- mov eax,WAVE_REGULAR_COUNT-1
-.bonus_wave_ok:
- shl eax,2
- mov edx,[wave_extra_shooter_masks+eax]
- mov ecx,ebx
- shr edx,cl
- test dl,1
- jz .no_bonus_shooter
+ ; Every living monster gets its own independent firing timer.
  mov byte [enemy_shoot_enabled+ebx],1
-.no_bonus_shooter:
  call place_enemy_randomly
  call random_enemy_move_interval
  mov [enemy_move_intervals+ebx*4],eax
- cmp byte [enemy_shoot_enabled+ebx],0
- je .no_fire_timer
  call random_attack_delay
  mov [enemy_fire_intervals+ebx*4],eax
-.no_fire_timer:
  add esi,E_SIZE
  inc ebx
  cmp ebx,MAX_ENEMIES

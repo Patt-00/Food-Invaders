@@ -60,7 +60,7 @@ maybe_drop_powerup:
     ret
 
 ; update_features(): advance and collect the current pickup once per game tick.
-; The pickup falls one row every PICKUP_STEP_TICKS (200 ms).
+; The pickup falls one row every PICKUP_STEP_TICKS (50 ms).
 update_features:
     pushad
     cmp byte [game_state], PLAYING
