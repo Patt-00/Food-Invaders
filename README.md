@@ -16,7 +16,7 @@ The script builds `INVADERS.COM` from `main.asm` and launches the game. It uses 
 
 ## Run on Termux
 
-Install NASM and DOSBox-X in Termux. Install the Termux:X11 app and companion package, and make sure `xdpyinfo` is available. Then run:
+See the [Termux installation guide](docs/TERMUX-INSTALLATION.md) for app setup, package installation, launch steps, and troubleshooting. Then run this from the repository root:
 
 ```sh
 ./run-termux.sh
