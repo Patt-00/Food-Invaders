@@ -1,5 +1,7 @@
 # Food Invaders
 
+[![Windows and macOS build tests](https://github.com/Patt-00/Food-Invaders/actions/workflows/platform-build-test.yml/badge.svg?branch=main)](https://github.com/Patt-00/Food-Invaders/actions/workflows/platform-build-test.yml)
+
 Food Invaders is a 16-bit NASM game for 386-compatible real-mode DOS. You play as the Chef and defend the kitchen from food-themed invaders with a cleaver and rolling pin. The original ASCII art is displayed in a 156 by 104 SVGA text field. The field has about 40% more character cells than the 132 by 88 version while keeping the artwork at its original dimensions. DOSBox-X launches it full-screen with a 3:2 aspect ratio.
 
 ## Run on Linux
@@ -42,6 +44,6 @@ The four regular waves place enemies at random positions across the playfield. E
 
 ## Project details
 
-The [game README](asm-space-invaders-main/README.md) covers wave behavior, the playable text-mode reference, module roles, and regression tests. The [Windows and macOS building guide](docs/BUILDING-GUIDE.md) installs prerequisites and walks through building and launching. The [Developer 2 contribution](asm-space-invaders-main/DEVELOPER2.md) describes the player and weapon work.
+The [game README](asm-space-invaders-main/README.md) covers wave behavior, the playable text-mode reference, module roles, and regression tests. The [Windows and macOS building guide](docs/BUILDING-GUIDE.md) installs prerequisites and walks through building and launching. The [Developer 2 contribution](asm-space-invaders-main/DEVELOPER2.md) describes the player and weapon work. The [host platform workflow](.github/workflows/platform-build-test.yml) runs both DOSBox-X CPU cores on Windows and macOS.
 
 The [normal-core test result](asm-space-invaders-main/tests/integrated-normal-result.txt) and [dynamic-core test result](asm-space-invaders-main/tests/integrated-dynamic-result.txt) record the latest local DOSBox-X runs.

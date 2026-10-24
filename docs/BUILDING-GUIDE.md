@@ -80,7 +80,7 @@ powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\run-dosbox.ps1 -DosBox
 .\build.ps1 -NasmPath $NasmPath -DosBoxPath $DosBoxPath -Test -Core dynamic
 ```
 
-The test results are written to `tests/integrated-normal-result.txt` and `tests/integrated-dynamic-result.txt`.
+The test results are written to `tests/integrated-normal-result.txt` and `tests/integrated-dynamic-result.txt`. The [host platform workflow](../.github/workflows/platform-build-test.yml) runs both cores on Windows and macOS with the same build script. Its surface-output test configuration does not verify a manual, full-screen play session.
 
 ## macOS
 
@@ -117,7 +117,9 @@ The [official NASM release directory](https://www.nasm.us/pub/nasm/releasebuilds
 
 1. Open the [official DOSBox-X download page](https://dosbox-x.com/).
 2. Download the package for an Intel Mac or Apple silicon Mac.
-3. Unzip the package and move its `dosbox-x.app` to `/Applications`. The official [DOSBox-X installation guide](https://github.com/joncampbell123/dosbox-x/blob/master/INSTALL.md) describes the SDL1 and SDL2 packages. The current SDL2 build requires macOS 12 or later.
+3. Unzip the package and move its `dosbox-x.app` to `/Applications`. The official [DOSBox-X installation guide](https://github.com/joncampbell123/dosbox-x/blob/master/INSTALL.md) describes the SDL1 and SDL2 packages. Choose SDL2 on macOS 12 or later, and choose SDL1 on older supported macOS versions.
+
+If Gatekeeper blocks the downloaded app, confirm the archive came from the official DOSBox-X page, then follow the macOS Privacy & Security prompt. The DOSBox-X installation guide describes this prompt.
 
 Homebrew also provides a `dosbox-x` command through `brew install dosbox-x`. The Homebrew package is maintained by Homebrew contributors; the DOSBox-X project provides the direct Mac packages on its download page.
 
