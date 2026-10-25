@@ -73,21 +73,4 @@ EOF
 dosbox-x -nopromptfolder -fastlaunch -nomenu -conf "$config_file" -c "mount c \"$game_dir\"" -c 'c:' -c 'INVADERS.COM' -c 'exit' &
 emulator_pid=$!
 
-# Re-expose the sized SDL2 window after the VGA timing change to clear stale frames.
-if command -v xdotool >/dev/null 2>&1; then
-    attempts=0
-    while kill -0 "$emulator_pid" 2>/dev/null && [ "$attempts" -lt 30 ]; do
-        window_id=$(xdotool search --pid "$emulator_pid" --name DOSBox 2>/dev/null | head -n 1 || true)
-        if [ -n "$window_id" ]; then
-            if xdotool getwindowgeometry --shell "$window_id" 2>/dev/null |
-                awk -F= -v expected_width="$window_width" -v expected_height="$window_height" '/^WIDTH=/ {w=$2} /^HEIGHT=/ {h=$2} END {exit !(w==expected_width && h==expected_height)}'; then
-                sleep 0.3
-                xdotool windowunmap "$window_id" windowmap "$window_id" windowfocus "$window_id" || true
-                break
-            fi
-        fi
-        attempts=$((attempts + 1))
-        sleep 0.1
-    done
-fi
 wait "$emulator_pid"

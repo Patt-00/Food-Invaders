@@ -29,17 +29,17 @@ pkg update
 pkg upgrade
 pkg install x11-repo
 pkg update
-pkg install git nasm dosbox-x termux-x11-nightly xorg-xdpyinfo xdotool
+pkg install git nasm dosbox-x termux-x11-nightly xorg-xdpyinfo
 ```
 
 Confirm that Termux can find the launcher tools:
 
 ```sh
-command -v git nasm dosbox-x termux-x11 xdpyinfo xdotool
+command -v git nasm dosbox-x termux-x11 xdpyinfo
 nasm -v
 ```
 
-The `x11-repo` package enables the graphical package repository. The `termux-x11-nightly` package installs the X server command, while the Android APK provides its display window. NASM builds the game, Git downloads its source, `xorg-xdpyinfo` reads the display size, and `xdotool` re-exposes the DOSBox-X window after the text-mode change.
+The `x11-repo` package enables the graphical package repository. The `termux-x11-nightly` package installs the X server command, while the Android APK provides its display window. NASM builds the game, Git downloads its source, and `xorg-xdpyinfo` reads the display size.
 
 ## Download the game
 
@@ -91,7 +91,7 @@ Enable the X11 repository, refresh the package list, then install the packages a
 ```sh
 pkg install x11-repo
 pkg update
-pkg install dosbox-x termux-x11-nightly xorg-xdpyinfo xdotool
+pkg install dosbox-x termux-x11-nightly xorg-xdpyinfo
 ```
 
 ### `nasm: command not found`
