@@ -2,7 +2,7 @@
 %include "assets/bullet_art.inc"
 %include "assets/feature_art.inc"
 
-; Text-mode renderer: one 180x120 back buffer, copied to A000h once per frame.
+; Text-mode renderer: one back buffer, copied to A000h once per frame.
 ; Movement/collision/drawing share type widths/heights. No Windows pixels.
 ; All routines preserve full general-purpose registers unless noted.
 buffer_guard_before dd 0A5C33C5Ah
@@ -72,8 +72,13 @@ initialize_display:
     and al, 7Fh
     out dx, al
     mov dx, [es:63h]
+%ifdef COMPACT_TEST_DISPLAY
+    mov si, compact_test_display_timing
+    mov cx, (compact_test_display_timing_end - compact_test_display_timing) / 2
+%else
     mov si, tall_display_timing
     mov cx, (tall_display_timing_end - tall_display_timing) / 2
+%endif
     cld
 .timing:
     lodsw                    ; AL=CRTC register, AH=value; OUT writes both ports.
@@ -108,6 +113,7 @@ initialize_display:
 ; 960 visible scanlines = 120 rows * 8 pixels. 1016 total scanlines
 ; leave room for blanking/retrace. The 180x120 field keeps a 3:2 ratio.
 ; Max-scanline retains eight-pixel glyphs and disables double scanning.
+%ifndef COMPACT_TEST_DISPLAY
 tall_display_timing:
     dw 0CB00h                ; Horizontal total = 208 character clocks.
     dw 0B301h                ; Last visible horizontal character = 179.
@@ -126,6 +132,28 @@ tall_display_timing:
     dw 0F716h                ; Vertical blank ends at the final raster line, 1015.
     dw 0FF18h                ; Line compare = 1023, avoiding a split screen.
 tall_display_timing_end:
+%else
+; Compact 156x104 text timing for regression COM files. The shipped game
+; uses the 180x120 timing above and remains full-size.
+compact_test_display_timing:
+    dw 0B300h                ; Horizontal total = 184 character clocks.
+    dw 09B01h                ; Last visible horizontal character = 155.
+    dw 09C02h                ; Horizontal blank starts at character 156.
+    dw 09603h                ; Horizontal blank ends after 26 clocks.
+    dw 0A104h                ; Horizontal retrace starts at character 161.
+    dw 01505h                ; Horizontal retrace remains 20 clocks wide.
+    dw 04E13h                ; Text memory stride is 78 words per row.
+    dw 07606h                ; Vertical total = 888 (register stores total-2).
+    dw 0FF07h                ; Overflow bits for the 832-line display.
+    dw 06709h                ; Eight glyph scanlines; blank/line-compare overflow.
+    dw 03F12h                ; Last visible scanline = 831 (033Fh).
+    dw 05010h                ; Vertical retrace starts at scanline 848.
+    dw 02411h                ; Retrace ends at 852; timing registers unlocked.
+    dw 04015h                ; Vertical blank starts at scanline 832.
+    dw 07716h                ; Vertical blank ends at the final raster line, 887.
+    dw 0FF18h                ; Line compare = 1023, avoiding a split screen.
+compact_test_display_timing_end:
+%endif
 
 
 clear_screen:

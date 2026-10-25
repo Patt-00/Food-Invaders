@@ -14,7 +14,7 @@ See the [Windows and macOS building guide](../docs/BUILDING-GUIDE.md) for prereq
 nasm -f bin main.asm -o INVADERS.COM
 ```
 
-`build.bat` provides the basic Windows build. `build.ps1 -Test -Core normal` assembles the game, four test programs, and checks their size, then runs the three regression suites in DOSBox-X. Repeat with `-Core dynamic` to test the other supported CPU core. All COM files must stay below 60,000 bytes to leave room for the DOS stack.
+`build.bat` provides the basic Windows build. `build.ps1 -Test -Core normal` assembles the 180x120 game and four regression programs, checks their size, then runs the three suites in DOSBox-X. Regression COM files use a compact 156x104 test display to stay below the 60,000-byte DOS segment budget; the shipped game remains 180x120. Repeat with `-Core dynamic` to test the other supported CPU core.
 
 Run with **DOSBox-X** and the `machine=svga_s3` setting. The program sets custom horizontal and vertical timing for 180 columns and 120 rows of 8 scanlines. It maps a 64 KiB A000 text window for the expanded frame. `dosbox.conf` supplies the emulator settings and starts `INVADERS.COM` when DOSBox-X starts from this directory. On Windows, use `run-dosbox.ps1 -DosBoxPath <path-to-dosbox-x>`. On Termux, use `../run-termux.sh` with Termux X11.
 

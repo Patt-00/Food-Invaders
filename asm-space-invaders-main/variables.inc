@@ -1,7 +1,13 @@
 ; Shared game data and constants.  This file is included once by main.asm.
 
+%ifdef COMPACT_TEST_DISPLAY
+; Keep standalone regression COM files below the DOS segment budget.
+SCREEN_WIDTH    equ 156
+SCREEN_HEIGHT   equ 104
+%else
 SCREEN_WIDTH    equ 180
 SCREEN_HEIGHT   equ 120
+%endif
 PLAYFIELD_TOP   equ 1        ; Row zero belongs to the HUD.
 PLAYER_WIDTH    equ 12
 PLAYER_HEIGHT   equ 16
@@ -23,8 +29,8 @@ PLAYER_HITBOX_HEIGHT equ PLAYER_HEIGHT
 
 ; Use the VGA 64 KiB A000 aperture for this 3:2 SVGA text field.
 VGA_TEXT_WINDOW_BYTES equ 65536
-%if SCREEN_WIDTH != 180 || SCREEN_HEIGHT != 120
-    %error "Display timing is configured for 180x120 cells"
+%if (SCREEN_WIDTH != 180 || SCREEN_HEIGHT != 120) && (SCREEN_WIDTH != 156 || SCREEN_HEIGHT != 104)
+    %error "Display timing is configured for 180x120 game or 156x104 test cells"
 %endif
 %if SCREEN_WIDTH * SCREEN_HEIGHT * 2 > VGA_TEXT_WINDOW_BYTES
     %error "Text frame must fit in the A000 VGA memory window"

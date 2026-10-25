@@ -16,13 +16,13 @@ try {
     if ($LASTEXITCODE -ne 0) { throw 'Game assembly failed.' }
     if ((Get-Item INVADERS.COM).Length -ge 60000) { throw 'COM exceeds the code/data budget reserved below the stack.' }
     if ($Test) {
-        & $NasmPath -f bin -Wall -w-reloc -Werror -DSELFTEST main.asm -o TEST.COM
+        & $NasmPath -f bin -Wall -w-reloc -Werror -DCOMPACT_TEST_DISPLAY -DSELFTEST main.asm -o TEST.COM
         if ($LASTEXITCODE -ne 0) { throw 'Test assembly failed.' }
-        & $NasmPath -f bin -Wall -w-reloc -Werror tests/player-bullet.asm -o PBTEST.COM
+        & $NasmPath -f bin -Wall -w-reloc -Werror -DCOMPACT_TEST_DISPLAY tests/player-bullet.asm -o PBTEST.COM
         if ($LASTEXITCODE -ne 0) { throw 'Player and weapon test assembly failed.' }
-        & $NasmPath -f bin -Wall -w-reloc -Werror tests/collision.asm -o COLLTEST.COM
+        & $NasmPath -f bin -Wall -w-reloc -Werror -DCOMPACT_TEST_DISPLAY tests/collision.asm -o COLLTEST.COM
         if ($LASTEXITCODE -ne 0) { throw 'Collision test assembly failed.' }
-        & $NasmPath -f bin -Wall -w-reloc -Werror -DSELFTEST -DVISUAL_TEST main.asm -o WINTEST.COM
+        & $NasmPath -f bin -Wall -w-reloc -Werror -DCOMPACT_TEST_DISPLAY -DSELFTEST -DVISUAL_TEST main.asm -o WINTEST.COM
         if ($LASTEXITCODE -ne 0) { throw 'Visual test assembly failed.' }
         foreach ($testBinary in @('TEST.COM', 'PBTEST.COM', 'COLLTEST.COM', 'WINTEST.COM')) {
             if ((Get-Item $testBinary).Length -ge 60000) { throw "$testBinary exceeds segment budget." }
