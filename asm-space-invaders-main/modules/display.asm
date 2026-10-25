@@ -2,7 +2,7 @@
 %include "assets/bullet_art.inc"
 %include "assets/feature_art.inc"
 
-; Text-mode renderer: one 156x104 back buffer, copied to B800h once per frame.
+; Text-mode renderer: one 180x120 back buffer, copied to A000h once per frame.
 ; Movement/collision/drawing share type widths/heights. No Windows pixels.
 ; All routines preserve full general-purpose registers unless noted.
 buffer_guard_before dd 0A5C33C5Ah
@@ -57,6 +57,12 @@ initialize_display:
     cmp word [es:4Ah], 132
     jne .unsupported
 
+    ; Map one 64 KiB A000 aperture while keeping VGA alphanumeric odd/even mode.
+    ; The 180x120 text page uses 43,200 bytes, beyond the standard B800 window.
+    mov dx, 03CEh
+    mov ax, 0606h
+    out dx, ax
+
     ; Use the active CRTC port and unlock its timing registers.
     mov dx, [es:63h]
     mov al, 11h
@@ -75,7 +81,7 @@ initialize_display:
     loop .timing
     mov word [es:4Ah], SCREEN_WIDTH
     mov byte [es:84h], SCREEN_HEIGHT - 1
-    mov word [es:4Ch], 8000h  ; Reserve one 32 KiB text page.
+    mov word [es:4Ch], SCREEN_WIDTH*SCREEN_HEIGHT*2 ; Reserve the expanded text page.
     mov ah, 01h
     mov cx, 2000h
     int 10h                  ; Hide the text cursor.
@@ -99,25 +105,25 @@ initialize_display:
     pop ax
     ret
 
-; 832 visible scanlines = 104 rows * 8 pixels. 888 total scanlines
-; leave room for blanking/retrace. The 156x104 field keeps a 3:2 ratio.
+; 960 visible scanlines = 120 rows * 8 pixels. 1016 total scanlines
+; leave room for blanking/retrace. The 180x120 field keeps a 3:2 ratio.
 ; Max-scanline retains eight-pixel glyphs and disables double scanning.
 tall_display_timing:
-    dw 0B300h                ; Horizontal total = 184 character clocks.
-    dw 09B01h                ; Last visible horizontal character = 155.
-    dw 09C02h                ; Horizontal blank starts at character 156.
-    dw 09603h                ; Horizontal blank ends after 26 clocks.
-    dw 0A104h                ; Horizontal retrace starts at character 161.
-    dw 01505h                ; Horizontal retrace remains 20 clocks wide.
-    dw 04E13h                ; Text memory stride is 78 words per row.
-    dw 07606h                ; Vertical total = 888 (register stores total-2).
-    dw 0FF07h                ; Overflow bits for the 832-line display.
+    dw 0CB00h                ; Horizontal total = 208 character clocks.
+    dw 0B301h                ; Last visible horizontal character = 179.
+    dw 0B402h                ; Horizontal blank starts at character 180.
+    dw 08E03h                ; Horizontal blank ends after 26 clocks.
+    dw 0B904h                ; Horizontal retrace starts at character 185.
+    dw 00D05h                ; Horizontal retrace remains 20 clocks wide.
+    dw 05A13h                ; Text memory stride is 90 words per row.
+    dw 0F606h                ; Vertical total = 1016 (register stores total-2).
+    dw 0FF07h                ; Overflow bits for the 960-line display.
     dw 06709h                ; Eight glyph scanlines; blank/line-compare overflow.
-    dw 03F12h                ; Last visible scanline = 831 (033Fh).
-    dw 05010h                ; Vertical retrace starts at scanline 848.
-    dw 02411h                ; Retrace ends at 852; timing registers unlocked.
-    dw 04015h                ; Vertical blank starts at scanline 832.
-    dw 07716h                ; Vertical blank ends at the final raster line, 887.
+    dw 0BF12h                ; Last visible scanline = 959 (03BFh).
+    dw 0D010h                ; Vertical retrace starts at scanline 976.
+    dw 02411h                ; Retrace ends at 980; timing registers unlocked.
+    dw 0C015h                ; Vertical blank starts at scanline 960.
+    dw 0F716h                ; Vertical blank ends at the final raster line, 1015.
     dw 0FF18h                ; Line compare = 1023, avoiding a split screen.
 tall_display_timing_end:
 
@@ -141,7 +147,7 @@ present_frame:
 present_screen:
  pushad
  push es
- mov ax,0B800h
+ mov ax,0A000h
  mov es,ax
  mov si,back_buffer
  xor di,di

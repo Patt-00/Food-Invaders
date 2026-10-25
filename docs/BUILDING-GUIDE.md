@@ -1,6 +1,6 @@
 # Building and running on Windows and macOS
 
-This guide installs NASM and DOSBox-X, builds Food Invaders, and starts the game on Windows or macOS. The game is a 16-bit DOS `.COM` program, so DOSBox-X runs it on both host systems. The game config uses `machine=svga_s3` and its custom 156 by 104 text display.
+This guide installs NASM and DOSBox-X, builds Food Invaders, and starts the game on Windows or macOS. The game is a 16-bit DOS `.COM` program, so DOSBox-X runs it on both host systems. The game config uses `machine=svga_s3` and its custom 180 by 120 text display.
 
 The Windows and macOS install steps were checked against the official project and vendor instructions on 2026-10-25. The local NASM build and DOSBox-X regression runs used NASM 3.02 and DOSBox-X 2026.10.01.
 
@@ -181,6 +181,6 @@ If you installed the official DOSBox-X app instead of the Homebrew command, repl
 | `R` | Restart after a result screen |
 | `Q` or Escape | Quit |
 
-DOSBox-X must use the `machine=svga_s3` setting in `dosbox.conf`. The game changes VGA text timings to display its 156 by 104 field. If DOSBox reports an unsupported video mode, confirm that DOSBox-X started with the repository's `dosbox.conf`.
+DOSBox-X must use the `machine=svga_s3` setting in `dosbox.conf`. The game changes VGA text timings to display its 180 by 120 field and maps a 64 KiB text window at A000. If DOSBox reports an unsupported video mode, confirm that DOSBox-X started with the repository's `dosbox.conf`.
 
 The host operating system does not open `INVADERS.COM` directly. Build the file with NASM, then launch it through DOSBox-X. If DOSBox-X reports that `INVADERS.COM` is missing, rebuild from `asm-space-invaders-main` before starting the emulator.

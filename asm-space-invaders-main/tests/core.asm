@@ -529,7 +529,7 @@ tests_start:
  check word [back_buffer+(5*SCREEN_WIDTH+7)*2],0D23h,'exact cupcake art drawn at an arbitrary position'
  check word [back_buffer+(TEST_PLAYER_Y*SCREEN_WIDTH+TEST_PLAYER_X+2)*2],0F23h,'chef drawn in player area'
  push es
- mov ax,0B800h
+ mov ax,0A000h
  mov es,ax
  mov ax,[es:(5*SCREEN_WIDTH+7)*2]
  pop es

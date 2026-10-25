@@ -1,7 +1,7 @@
 ; Shared game data and constants.  This file is included once by main.asm.
 
-SCREEN_WIDTH    equ 156
-SCREEN_HEIGHT   equ 104
+SCREEN_WIDTH    equ 180
+SCREEN_HEIGHT   equ 120
 PLAYFIELD_TOP   equ 1        ; Row zero belongs to the HUD.
 PLAYER_WIDTH    equ 12
 PLAYER_HEIGHT   equ 16
@@ -11,7 +11,7 @@ WEAPON_WIDTH    equ SOURCE_ART_WIDTH
 WEAPON_HEIGHT   equ SOURCE_ART_HEIGHT
 SOURCE_PICKUP_WIDTH equ 14
 SOURCE_PICKUP_HEIGHT equ 18
-BULLET_SPEED    equ 2        ; Keeps a shot in the shorter viewport through its cooldown.
+BULLET_SPEED    equ 2        ; Keeps a shot in the viewport through its cooldown.
 HOSTILE_SHOT_WIDTH equ 1
 HOSTILE_SHOT_HEIGHT equ 1
 PLAYER_MOVE_STEP equ 3       ; One key repeat moves far enough to cross the wide playfield.
@@ -21,12 +21,16 @@ PLAYER_HITBOX_Y equ 0
 PLAYER_HITBOX_WIDTH equ PLAYER_WIDTH
 PLAYER_HITBOX_HEIGHT equ PLAYER_HEIGHT
 
-; VGA 32 KiB text memory and 8-bit coordinates bound this display mode.
-%if SCREEN_WIDTH != 156 || SCREEN_HEIGHT != 104
-    %error "Display timing is configured for 156x104 cells"
+; Use the VGA 64 KiB A000 aperture for this 3:2 SVGA text field.
+VGA_TEXT_WINDOW_BYTES equ 65536
+%if SCREEN_WIDTH != 180 || SCREEN_HEIGHT != 120
+    %error "Display timing is configured for 180x120 cells"
 %endif
-%if SCREEN_WIDTH * SCREEN_HEIGHT * 2 > 32768
-    %error "Text frame must fit in VGA text memory"
+%if SCREEN_WIDTH * SCREEN_HEIGHT * 2 > VGA_TEXT_WINDOW_BYTES
+    %error "Text frame must fit in the A000 VGA memory window"
+%endif
+%if SCREEN_WIDTH > 255 || SCREEN_HEIGHT > 255
+    %error "Display dimensions must fit in 8-bit gameplay coordinates"
 %endif
 
 ; Gameplay collision bounds match the original document artwork.

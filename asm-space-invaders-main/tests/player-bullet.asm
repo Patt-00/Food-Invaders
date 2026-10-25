@@ -51,7 +51,7 @@ start:
     mov al, [es:84h]
     expect_reg al, SCREEN_HEIGHT - 1, 'BIOS reports all configured text rows'
     mov ax, [es:4Ch]
-    expect_reg ax, 8000h, 'BIOS page covers the configured frame'
+    expect_reg ax, SCREEN_WIDTH*SCREEN_HEIGHT*2, 'BIOS page covers the configured frame'
     push ds
     pop es
     call initialize_player
@@ -625,7 +625,7 @@ start:
     mov word [render_buffer + SCREEN_WIDTH * 60 * 2], 0742h
     mov word [render_buffer + (SCREEN_WIDTH * SCREEN_HEIGHT - 1) * 2], 0743h
     call present_frame
-    mov ax, 0B800h
+    mov ax, 0A000h
     mov es, ax
     mov ax, [es:0]
     expect_reg ax, 0741h, 'VGA copy includes first cell'

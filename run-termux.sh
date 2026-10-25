@@ -8,7 +8,7 @@ export SDL_VIDEODRIVER=x11
 export SDL_AUDIODRIVER=dummy
 
 if ! command -v dosbox-x >/dev/null 2>&1; then
-    echo "Install DOSBox-X for the 156x104 battlefield: pkg install dosbox-x" >&2
+    echo "Install DOSBox-X for the 180x120 battlefield: pkg install dosbox-x" >&2
     exit 1
 fi
 

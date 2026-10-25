@@ -1,6 +1,6 @@
 # Food Invaders
 
-A 16-bit NASM game for 386-compatible real-mode DOS. `main.asm` renders the original colored ASCII designs from the project document in a 156 by 104 SVGA text field. DOSBox-X launches the game full-screen with a 3:2 aspect ratio. The field has about 40% more character cells than the 132 by 88 version, and keeps the original art dimensions: Chef and weapons are 12 by 16 cells, food enemies are 14 to 22 by 11 to 16 cells, Ratatouille is 15 by 16 cells, and the fireball is 14 by 18 cells.
+A 16-bit NASM game for 386-compatible real-mode DOS. `main.asm` renders the original colored ASCII designs from the project document in a 180 by 120 SVGA text field. DOSBox-X launches the game full-screen with a 3:2 aspect ratio. The field has about 86% more character cells than the 132 by 88 version, and keeps the original art dimensions: Chef and weapons are 12 by 16 cells, food enemies are 14 to 22 by 11 to 16 cells, Ratatouille is 15 by 16 cells, and the fireball is 14 by 18 cells.
 
 ## Gameplay reference
 
@@ -16,7 +16,7 @@ nasm -f bin main.asm -o INVADERS.COM
 
 `build.bat` provides the basic Windows build. `build.ps1 -Test -Core normal` assembles the game, four test programs, and checks their size, then runs the three regression suites in DOSBox-X. Repeat with `-Core dynamic` to test the other supported CPU core. All COM files must stay below 60,000 bytes to leave room for the DOS stack.
 
-Run with **DOSBox-X** and the `machine=svga_s3` setting. The program sets custom horizontal and vertical timing for 156 columns and 104 rows of 8 scanlines. `dosbox.conf` supplies the emulator settings and starts `INVADERS.COM` when DOSBox-X starts from this directory. On Windows, use `run-dosbox.ps1 -DosBoxPath <path-to-dosbox-x>`. On Termux, use `../run-termux.sh` with Termux X11.
+Run with **DOSBox-X** and the `machine=svga_s3` setting. The program sets custom horizontal and vertical timing for 180 columns and 120 rows of 8 scanlines. It maps a 64 KiB A000 text window for the expanded frame. `dosbox.conf` supplies the emulator settings and starts `INVADERS.COM` when DOSBox-X starts from this directory. On Windows, use `run-dosbox.ps1 -DosBoxPath <path-to-dosbox-x>`. On Termux, use `../run-termux.sh` with Termux X11.
 
 ## Controls and behavior
 
