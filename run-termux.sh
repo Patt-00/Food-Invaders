@@ -29,6 +29,8 @@ if ! xdpyinfo -display "$DISPLAY" >/dev/null 2>&1; then
 fi
 
 am start -n com.termux.x11/.MainActivity >/dev/null 2>&1 || true
+# Wait for the Android X11 surface to attach before SDL opens its window.
+sleep 1
 # Use the full Termux:X11 display while preserving the board's 3:2 ratio.
 # Character artwork is rendered at its documented text-cell dimensions.
 set -- $(xdpyinfo -display "$DISPLAY" | awk '/dimensions:/ {split($2, size, "x"); print size[1], size[2]; exit}')
@@ -59,13 +61,14 @@ EOF
 
 dosbox-x -nopromptfolder -fastlaunch -nomenu -conf "$config_file" -c "mount c \"$game_dir\"" -c 'c:' -c 'INVADERS.COM' -c 'exit' &
 emulator_pid=$!
+sleep 1
 
 # Termux:X11 can leave SDL2 in a 640x400 window even when the config requests
 # fullscreen. Toggle DOSBox-X's Linux fullscreen hotkey, then re-expose the window
 # after its 3:2 geometry fills most of the X display.
 if command -v xdotool >/dev/null 2>&1; then
     attempts=0
-    fullscreen_requested=0
+    fullscreen_attempts=0
     while kill -0 "$emulator_pid" 2>/dev/null && [ "$attempts" -lt 30 ]; do
         window_id=$(xdotool search --pid "$emulator_pid" --name DOSBox 2>/dev/null | head -n 1 || true)
         if [ -n "$window_id" ]; then
@@ -74,13 +77,16 @@ if command -v xdotool >/dev/null 2>&1; then
                 sleep 0.3
                 xdotool windowunmap "$window_id" windowmap "$window_id" windowfocus "$window_id" || true
                 break
-            elif [ "$fullscreen_requested" -eq 0 ]; then
+            elif [ "$fullscreen_attempts" -lt 3 ] && [ "$((attempts % 10))" -eq 0 ]; then
                 xdotool windowfocus "$window_id" key --clearmodifiers F12+f || true
-                fullscreen_requested=1
+                fullscreen_attempts=$((fullscreen_attempts + 1))
             fi
         fi
         attempts=$((attempts + 1))
         sleep 0.1
     done
+    if [ "$fullscreen_attempts" -ge 3 ]; then
+        echo "DOSBox-X stayed windowed after fullscreen attempts; check Termux:X11." >&2
+    fi
 fi
 wait "$emulator_pid"
