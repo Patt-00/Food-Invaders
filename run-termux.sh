@@ -60,17 +60,24 @@ EOF
 dosbox-x -nopromptfolder -fastlaunch -nomenu -conf "$config_file" -c "mount c \"$game_dir\"" -c 'c:' -c 'INVADERS.COM' -c 'exit' &
 emulator_pid=$!
 
-# Termux X11/SDL2 can retain the old blank surface after VGA raster changes.
-# Re-expose only this emulator's window once its final geometry is available.
+# Termux:X11 can leave SDL2 in a 640x400 window even when the config requests
+# fullscreen. Toggle DOSBox-X's Linux fullscreen hotkey, then re-expose the window
+# after its 3:2 geometry fills most of the X display.
 if command -v xdotool >/dev/null 2>&1; then
     attempts=0
+    fullscreen_requested=0
     while kill -0 "$emulator_pid" 2>/dev/null && [ "$attempts" -lt 30 ]; do
         window_id=$(xdotool search --pid "$emulator_pid" --name DOSBox 2>/dev/null | head -n 1 || true)
-        if [ -n "$window_id" ] && xdotool getwindowgeometry --shell "$window_id" 2>/dev/null |
-            awk -F= -v expected_width="$display_width" -v expected_height="$display_height" '/^WIDTH=/ {w=$2} /^HEIGHT=/ {h=$2} END {exit !(w==expected_width && h==expected_height)}'; then
-            sleep 0.3
-            xdotool windowunmap "$window_id" windowmap "$window_id" windowfocus "$window_id" || true
-            break
+        if [ -n "$window_id" ]; then
+            if xdotool getwindowgeometry --shell "$window_id" 2>/dev/null |
+                awk -F= -v min_width="$((display_width*80/100))" -v min_height="$((display_height*80/100))" '/^WIDTH=/ {w=$2} /^HEIGHT=/ {h=$2} END {exit !(w>=min_width && h>=min_height)}'; then
+                sleep 0.3
+                xdotool windowunmap "$window_id" windowmap "$window_id" windowfocus "$window_id" || true
+                break
+            elif [ "$fullscreen_requested" -eq 0 ]; then
+                xdotool windowfocus "$window_id" key --clearmodifiers F12+f || true
+                fullscreen_requested=1
+            fi
         fi
         attempts=$((attempts + 1))
         sleep 0.1
