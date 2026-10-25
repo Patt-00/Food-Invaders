@@ -64,28 +64,27 @@ emulator_pid=$!
 sleep 1
 
 # Termux:X11 can leave SDL2 in a 640x400 window even when the config requests
-# fullscreen. Toggle DOSBox-X's Linux fullscreen hotkey, then re-expose the window
-# after its 3:2 geometry fills most of the X display.
+# fullscreen. Toggle DOSBox-X's Linux fullscreen hotkey after the game sets its
+# video mode, then keep the resulting fullscreen window focused.
 if command -v xdotool >/dev/null 2>&1; then
     attempts=0
-    fullscreen_attempts=0
+    fullscreen_requested=0
     while kill -0 "$emulator_pid" 2>/dev/null && [ "$attempts" -lt 30 ]; do
         window_id=$(xdotool search --pid "$emulator_pid" --name DOSBox 2>/dev/null | head -n 1 || true)
         if [ -n "$window_id" ]; then
             if xdotool getwindowgeometry --shell "$window_id" 2>/dev/null |
                 awk -F= -v min_width="$((display_width*80/100))" -v min_height="$((display_height*80/100))" '/^WIDTH=/ {w=$2} /^HEIGHT=/ {h=$2} END {exit !(w>=min_width && h>=min_height)}'; then
-                sleep 0.3
-                xdotool windowunmap "$window_id" windowmap "$window_id" windowfocus "$window_id" || true
+                xdotool windowfocus "$window_id" || true
                 break
-            elif [ "$fullscreen_attempts" -lt 3 ] && [ "$((attempts % 10))" -eq 0 ]; then
+            elif [ "$fullscreen_requested" -eq 0 ]; then
                 xdotool windowfocus "$window_id" key --clearmodifiers F12+f || true
-                fullscreen_attempts=$((fullscreen_attempts + 1))
+                fullscreen_requested=1
             fi
         fi
         attempts=$((attempts + 1))
         sleep 0.1
     done
-    if [ "$fullscreen_attempts" -ge 3 ]; then
+    if [ "$fullscreen_requested" -eq 1 ] && [ "$attempts" -ge 30 ]; then
         echo "DOSBox-X stayed windowed after fullscreen attempts; check Termux:X11." >&2
     fi
 fi
