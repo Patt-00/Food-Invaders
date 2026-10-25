@@ -43,10 +43,17 @@ try {
         # Tests use redirected DOS output, so avoid opening an SDL window/audio device.
         # RUNTEST.BAT exits the emulator after reporting status.
         $previousAudioDriver = $env:SDL_AUDIODRIVER
+        $previousErrorActionPreference = $ErrorActionPreference
         try {
             $env:SDL_AUDIODRIVER = 'dummy'
+            # DOSBox-X writes informational startup logs to stderr. Capture them
+            # without letting PowerShell convert those lines into a build failure.
+            $ErrorActionPreference = 'Continue'
             & $DosBoxPath -silent -nopromptfolder -fastlaunch -conf $testConfig 2>&1 | Set-Content -LiteralPath (Join-Path $sourceRoot 'tests/dosbox-host.log')
-        } finally { $env:SDL_AUDIODRIVER = $previousAudioDriver }
+        } finally {
+            $ErrorActionPreference = $previousErrorActionPreference
+            $env:SDL_AUDIODRIVER = $previousAudioDriver
+        }
         if (!(Test-Path -LiteralPath 'STATUS.TXT') -or (Get-Content STATUS.TXT -Raw).Trim() -ne 'PASS') {
             foreach ($testLog in @('TESTLOG.TXT','PBLOG.TXT','COLLLOG.TXT')) {
                 if (Test-Path -LiteralPath $testLog) { Get-Content $testLog }
