@@ -2,17 +2,24 @@
 
 [![Windows and macOS build tests](https://github.com/Patt-00/Food-Invaders/actions/workflows/platform-build-test.yml/badge.svg?branch=main)](https://github.com/Patt-00/Food-Invaders/actions/workflows/platform-build-test.yml)
 
-Food Invaders is a 16-bit NASM game for 386-compatible real-mode DOS. You play as the Chef and defend the kitchen from food-themed invaders with a cleaver and rolling pin. The original ASCII art is displayed in a 180 by 120 SVGA text field. The field has about 86% more character cells than the 132 by 88 version while keeping the artwork at its original dimensions. DOSBox-X launches it full-screen with a 3:2 aspect ratio.
+Food Invaders is a 16-bit NASM arcade game for 386-compatible real-mode DOS. Play as the Chef and defend the kitchen from food-themed invaders. The game keeps the original colored ASCII art at its source dimensions and displays it in a 180×120 SVGA text field. DOSBox-X runs it full-screen at a 3:2 aspect ratio.
+
+## Game features
+
+- The 180×120 field has 21,600 character cells, about 86% more than a 132×88 field.
+- Four waves of randomized food enemies lead to a fifth stage with Ratatouille, a 20 HP boss.
+- Enemies move and fire on independent timers, keep four cells apart, and stay above the Chef's eight-row safety line.
+- Choose Easy, Normal, or Hard. Use the cleaver, rolling pin, and temporary power-ups.
 
 ## Run on Linux
 
-Install NASM and DOSBox-X, then run this script from the repository root:
+From the repository root, run:
 
 ```sh
 ./run-linux.sh
 ```
 
-The script builds `INVADERS.COM` from `main.asm` and launches the game. It uses a native `dosbox-x` command when available, or the DOSBox-X Flatpak when installed. The preset uses `cycles=max`, which can increase CPU use, heat, and battery drain on mobile devices.
+The script builds `INVADERS.COM` from `asm-space-invaders-main/main.asm` and launches DOSBox-X. It uses the native `dosbox-x` command when available, or the DOSBox-X Flatpak. The preset uses `cycles=max`, which can increase CPU use, heat, and battery drain on mobile devices.
 
 ## Run on Termux
 
@@ -22,11 +29,11 @@ See the [Termux installation guide](docs/TERMUX-INSTALLATION.md) for app setup, 
 ./run-termux.sh
 ```
 
-The game uses DOSBox-X's SVGA S3 mode. Its launcher fills the Termux:X11 display while preserving the board's proportions. A plain text-only Termux session is not enough for the game window.
+The game uses DOSBox-X's SVGA S3 mode. The launcher fills the Termux:X11 display while keeping the board's proportions. A text-only Termux session cannot display the game window.
 
 ## Run on Windows or macOS
 
-See the [Windows and macOS building guide](docs/BUILDING-GUIDE.md) for NASM and DOSBox-X installation, build commands, and launch steps.
+Use the [Windows and macOS building guide](docs/BUILDING-GUIDE.md) to install NASM and DOSBox-X, build the game, and launch it.
 
 ## Controls
 
@@ -40,10 +47,15 @@ See the [Windows and macOS building guide](docs/BUILDING-GUIDE.md) for NASM and 
 | R | Restart after a result screen |
 | Q or Escape | Quit |
 
-The four regular waves place enemies at random positions across the playfield. Each enemy takes independent random steps on both axes, avoids the others, stays above the Chef's safety line, and can fire on its own random timer. Later waves increase movement and firing speed. A 20 HP Ratatouille boss follows the fourth wave. Enemy bullets use a single text cell; the fireball power-up drops one row every 50 ms.
+The campaign has four regular waves and a final Ratatouille boss stage. Enemy positions and firing delays are randomized, and later waves increase the difficulty. Enemy bullets use a single text cell. The fireball power-up falls one row every 50 ms.
 
 ## Project details
 
-The [game README](asm-space-invaders-main/README.md) covers wave behavior, the playable text-mode reference, module roles, and regression tests. The [Windows and macOS building guide](docs/BUILDING-GUIDE.md) installs prerequisites and walks through building and launching. The [Developer 2 contribution](asm-space-invaders-main/DEVELOPER2.md) describes the player and weapon work. The [host platform workflow](.github/workflows/platform-build-test.yml) runs both DOSBox-X CPU cores on Windows and macOS.
+The project documentation includes:
 
-The [normal-core test result](asm-space-invaders-main/tests/integrated-normal-result.txt) and [dynamic-core test result](asm-space-invaders-main/tests/integrated-dynamic-result.txt) record the latest local DOSBox-X runs.
+- [Game details and code structure](asm-space-invaders-main/README.md)
+- [Windows and macOS building guide](docs/BUILDING-GUIDE.md)
+- [Developer 2 contribution](asm-space-invaders-main/DEVELOPER2.md)
+- [Windows and macOS build workflow](.github/workflows/platform-build-test.yml)
+
+The [normal-core result](asm-space-invaders-main/tests/integrated-normal-result.txt) and [dynamic-core result](asm-space-invaders-main/tests/integrated-dynamic-result.txt) record the latest local DOSBox-X regression runs.

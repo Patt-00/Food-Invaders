@@ -1,8 +1,6 @@
-# Building and running on Windows and macOS
+# Build and run Food Invaders on Windows and macOS
 
-This guide installs NASM and DOSBox-X, builds Food Invaders, and starts the game on Windows or macOS. The game is a 16-bit DOS `.COM` program, so DOSBox-X runs it on both host systems. The game config uses `machine=svga_s3` and its custom 180 by 120 text display.
-
-The Windows and macOS install steps were checked against the official project and vendor instructions on 2026-10-25. The local NASM build and DOSBox-X regression runs used NASM 3.02 and DOSBox-X 2026.10.01.
+Use this guide to install NASM and DOSBox-X, build `INVADERS.COM`, and start the game. Food Invaders is a 16-bit DOS program. It needs DOSBox-X with SVGA S3 mode enabled. The display uses a 180×120 text field and a 64 KiB VGA memory window at A000.
 
 ## Requirements
 
@@ -24,7 +22,7 @@ git clone https://github.com/Patt-00/Food-Invaders.git
 
 Without Git, open the [Food Invaders repository](https://github.com/Patt-00/Food-Invaders), choose **Code**, then choose **Download ZIP**. GitHub documents this source archive method in its [download guide](https://docs.github.com/en/repositories/working-with-files/using-files/downloading-source-code-archives).
 
-The build commands use the `asm-space-invaders-main` folder. The repository does not include generated `.COM` files, so build the game before launching it.
+The game source and build scripts are in `asm-space-invaders-main`. The repository does not include generated `.COM` files. Build `INVADERS.COM` before launching the game.
 
 ## Windows
 
@@ -38,7 +36,7 @@ The build commands use the `asm-space-invaders-main` folder. The repository does
 nasm -v
 ```
 
-If PowerShell cannot find `nasm`, use the full path to `nasm.exe` in the build command below. The example path is `C:\Program Files\NASM\nasm.exe`; use the location on your computer.
+If PowerShell cannot find `nasm`, pass the full path to `nasm.exe` to the build script. The example path is `C:\Program Files\NASM\nasm.exe`; use the location on your computer.
 
 ### Install DOSBox-X
 
@@ -62,7 +60,7 @@ $DosBoxPath = 'C:\Program Files\DOSBox-X\dosbox-x.exe'
 .\run-dosbox.ps1 -DosBoxPath $DosBoxPath
 ```
 
-If `nasm` and `dosbox-x` are on `PATH`, you can call `build.ps1` without `-NasmPath`, and `run-dosbox.ps1` without `-DosBoxPath`. The script parameters avoid depending on installer-specific folders.
+If `nasm` and `dosbox-x` are on `PATH`, run `build.ps1` and `run-dosbox.ps1` without path parameters. Otherwise, pass each executable's full path as shown above.
 
 If Windows blocks a local PowerShell script, run it with a process-only execution policy. This does not change the machine-wide policy:
 
@@ -96,7 +94,7 @@ Apple explains this installation in its [Command Line Tools guide](https://devel
 
 ### Install NASM
 
-The Homebrew route installs a NASM build for the Mac's processor architecture. After the Command Line Tools are installed, run Homebrew's official installer:
+Homebrew installs NASM for your Mac's processor architecture. After installing the Command Line Tools, run Homebrew's official installer:
 
 ```sh
 /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
@@ -109,7 +107,7 @@ brew install nasm
 nasm -v
 ```
 
-Homebrew lists NASM and its install command on its [NASM formula page](https://formulae.brew.sh/formula/nasm). Homebrew currently supports macOS 15 and later; check its [installation requirements](https://docs.brew.sh/Installation) before using it on an older Mac.
+Homebrew lists the NASM install command on its [NASM formula page](https://formulae.brew.sh/formula/nasm). Its standard supported setup requires Apple silicon and macOS 15 or later. Intel Macs and older macOS versions may have limited support. Check Homebrew's [installation requirements](https://docs.brew.sh/Installation) before installing it.
 
 The [official NASM release directory](https://www.nasm.us/pub/nasm/releasebuilds/3.02/macosx/) also provides a macOS ZIP. That binary is Intel-based. On Apple silicon, use Homebrew for a native NASM build or install Apple's [Rosetta support](https://support.apple.com/en-us/102527) before using the Intel binary.
 
@@ -169,7 +167,7 @@ pwsh -NoProfile -File ./build.ps1 -NasmPath "$(command -v nasm)" -DosBoxPath "$(
 
 If you installed the official DOSBox-X app instead of the Homebrew command, replace `$(command -v dosbox-x)` with the app executable path.
 
-## Controls and troubleshooting
+## Controls
 
 | Key | Action |
 | --- | --- |
@@ -181,6 +179,8 @@ If you installed the official DOSBox-X app instead of the Homebrew command, repl
 | `R` | Restart after a result screen |
 | `Q` or Escape | Quit |
 
-DOSBox-X must use the `machine=svga_s3` setting in `dosbox.conf`. The game changes VGA text timings to display its 180 by 120 field and maps a 64 KiB text window at A000. If DOSBox reports an unsupported video mode, confirm that DOSBox-X started with the repository's `dosbox.conf`.
+## Troubleshooting
 
-The host operating system does not open `INVADERS.COM` directly. Build the file with NASM, then launch it through DOSBox-X. If DOSBox-X reports that `INVADERS.COM` is missing, rebuild from `asm-space-invaders-main` before starting the emulator.
+Start DOSBox-X with the repository's `dosbox.conf`. It selects `machine=svga_s3`, mounts the game folder, and starts `INVADERS.COM`. If DOSBox reports an unsupported video mode, confirm that you launched DOSBox-X with this configuration.
+
+If DOSBox-X reports that `INVADERS.COM` is missing, return to `asm-space-invaders-main` and build the game before launching it. The host operating system cannot run the DOS `.COM` file directly.
