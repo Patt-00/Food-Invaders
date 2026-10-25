@@ -36,13 +36,24 @@ sleep 1
 set -- $(xdpyinfo -display "$DISPLAY" | awk '/dimensions:/ {split($2, size, "x"); print size[1], size[2]; exit}')
 display_width=$1
 display_height=$2
+if [ "$((display_width*2))" -le "$((display_height*3))" ]; then
+    window_width=$display_width
+    window_height=$((display_width*2/3))
+else
+    window_height=$display_height
+    window_width=$((display_height*3/2))
+fi
+window_x=$(((display_width-window_width)/2))
+window_y=$(((display_height-window_height)/2))
 config_file=$(mktemp)
 trap 'rm -f "$config_file"' EXIT
 cat > "$config_file" <<EOF
 [sdl]
 output=openglnb
-fullscreen=true
+fullscreen=false
 fullresolution=desktop
+windowresolution=${window_width}x${window_height}
+windowposition=${window_x},${window_y}
 autolock=false
 [dosbox]
 machine=svga_s3
@@ -61,31 +72,22 @@ EOF
 
 dosbox-x -nopromptfolder -fastlaunch -nomenu -conf "$config_file" -c "mount c \"$game_dir\"" -c 'c:' -c 'INVADERS.COM' -c 'exit' &
 emulator_pid=$!
-sleep 1
 
-# Termux:X11 can leave SDL2 in a 640x400 window even when the config requests
-# fullscreen. Toggle DOSBox-X's Linux fullscreen hotkey after the game sets its
-# video mode, then keep the resulting fullscreen window focused.
+# Re-expose the sized SDL2 window after the VGA timing change to clear stale frames.
 if command -v xdotool >/dev/null 2>&1; then
     attempts=0
-    fullscreen_requested=0
     while kill -0 "$emulator_pid" 2>/dev/null && [ "$attempts" -lt 30 ]; do
         window_id=$(xdotool search --pid "$emulator_pid" --name DOSBox 2>/dev/null | head -n 1 || true)
         if [ -n "$window_id" ]; then
             if xdotool getwindowgeometry --shell "$window_id" 2>/dev/null |
-                awk -F= -v min_width="$((display_width*80/100))" -v min_height="$((display_height*80/100))" '/^WIDTH=/ {w=$2} /^HEIGHT=/ {h=$2} END {exit !(w>=min_width && h>=min_height)}'; then
-                xdotool windowfocus "$window_id" || true
+                awk -F= -v expected_width="$window_width" -v expected_height="$window_height" '/^WIDTH=/ {w=$2} /^HEIGHT=/ {h=$2} END {exit !(w==expected_width && h==expected_height)}'; then
+                sleep 0.3
+                xdotool windowunmap "$window_id" windowmap "$window_id" windowfocus "$window_id" || true
                 break
-            elif [ "$fullscreen_requested" -eq 0 ]; then
-                xdotool windowfocus "$window_id" key --clearmodifiers F12+f || true
-                fullscreen_requested=1
             fi
         fi
         attempts=$((attempts + 1))
         sleep 0.1
     done
-    if [ "$fullscreen_requested" -eq 1 ] && [ "$attempts" -ge 30 ]; then
-        echo "DOSBox-X stayed windowed after fullscreen attempts; check Termux:X11." >&2
-    fi
 fi
 wait "$emulator_pid"

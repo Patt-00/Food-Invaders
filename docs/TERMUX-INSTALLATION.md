@@ -1,6 +1,6 @@
 # Install and run Food Invaders on Termux
 
-Food Invaders runs on Android through Termux, DOSBox-X, and Termux:X11. The `run-termux.sh` launcher builds the DOS game, starts the X server when needed, opens the Termux:X11 app, and launches DOSBox-X full-screen. Termux:X11 requires Android 8 or later, its Android app, and its companion Termux package, as described in the [official setup instructions](https://github.com/termux/termux-x11#setup-instructions).
+Food Invaders runs on Android through Termux, DOSBox-X, and Termux:X11. The `run-termux.sh` launcher builds the DOS game, starts the X server when needed, opens the Termux:X11 app, then sizes and centers a DOSBox-X window to fill the display at the game's 3:2 ratio. Termux:X11 requires Android 8 or later, its Android app, and its companion Termux package, as described in the [official setup instructions](https://github.com/termux/termux-x11#setup-instructions).
 
 ## Requirements
 
@@ -39,7 +39,7 @@ command -v git nasm dosbox-x termux-x11 xdpyinfo xdotool
 nasm -v
 ```
 
-The `x11-repo` package enables the graphical package repository. The `termux-x11-nightly` package installs the X server command, while the Android APK provides its display window. NASM builds the game, Git downloads its source, `xorg-xdpyinfo` checks the display, and `xdotool` switches DOSBox-X to fullscreen if Android starts it in a 640x400 window.
+The `x11-repo` package enables the graphical package repository. The `termux-x11-nightly` package installs the X server command, while the Android APK provides its display window. NASM builds the game, Git downloads its source, `xorg-xdpyinfo` reads the display size, and `xdotool` re-exposes the DOSBox-X window after the text-mode change.
 
 ## Download the game
 
@@ -66,7 +66,7 @@ Run the launcher from the repository folder:
 ./run-termux.sh
 ```
 
-The launcher assembles `main.asm`, starts the X server on display `:0` if needed, opens Termux:X11, then starts DOSBox-X with the game. Keep Termux:X11 open while you play. DOSBox-X fills the display and preserves the game's 3:2 board proportions.
+The launcher assembles `main.asm`, starts the X server on display `:0` if needed, opens Termux:X11, and sizes the DOSBox-X window to the largest centered 3:2 rectangle that fits the display. Keep Termux:X11 open while you play.
 
 The launcher sets DOSBox-X to `cycles=max` for full speed. This can use more battery and make the device warm during a long session.
 
