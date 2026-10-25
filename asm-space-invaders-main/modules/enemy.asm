@@ -249,7 +249,7 @@ place_enemy_randomly:
  jb .random_try
 
  ; If random rejection sampling fills a dense patch, scan from a random point
- ; through the legal field while preserving the two-cell enemy clearance.
+ ; through the legal field while preserving the configured enemy clearance.
  call random_enemy_position
  mov al,[enemy_candidate_x]
  mov [enemy_scan_start_x],al
