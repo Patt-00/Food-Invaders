@@ -13,7 +13,7 @@ if ! command -v dosbox-x >/dev/null 2>&1; then
 fi
 
 cd "$game_dir"
-nasm -f bin main.asm -o INVADERS.COM
+nasm -DTERMUX_FAST -f bin main.asm -o INVADERS.COM
 
 if ! xdpyinfo -display "$DISPLAY" >/dev/null 2>&1; then
     termux-x11 "$DISPLAY" > "$repo_dir/termux-x11.log" 2>&1 &
@@ -55,16 +55,19 @@ fullresolution=desktop
 windowresolution=${window_width}x${window_height}
 windowposition=${window_x},${window_y}
 autolock=false
+doublescan=false
 [dosbox]
 machine=svga_s3
 working directory option=noprompt
 [render]
+frameskip=1
 scaler=none
 aspect=true
 aspect_ratio=3:2
 modeswitch=false
 glshader=none
 [cpu]
+core=dynamic
 cycles=max
 [midi]
 mididevice=none

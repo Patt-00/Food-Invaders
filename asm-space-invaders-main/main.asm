@@ -166,14 +166,19 @@ read_input:
 ; Procedure: wait_frame
 ; Purpose: Make movement visible instead of running the loop at full CPU speed.
 ; Input: None
-; Output: Approximately 50 milliseconds pass when BIOS wait is supported.
+; Output: Approximately 50 milliseconds pass on desktop builds, or 25 ms when
+;         the Termux fast profile is selected.
 ; Modifies: AX, CX, DX
 ; Shared variables used: None
 ; -------------------------------------------------
 wait_frame:
     mov ah, 86h
     mov cx, 0
+%ifdef TERMUX_FAST
+    mov dx, 25000
+%else
     mov dx, 50000
+%endif
     int 15h
     ret
 

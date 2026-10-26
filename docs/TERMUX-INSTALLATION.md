@@ -68,7 +68,7 @@ Run the launcher from the repository folder:
 
 The launcher assembles `main.asm`, starts the X server on display `:0` if needed, opens Termux:X11, and sizes the DOSBox-X window to the largest centered 3:2 rectangle that fits the display. Keep Termux:X11 open while you play.
 
-The launcher sets DOSBox-X to `cycles=max` for full speed. This can use more battery and make the device warm during a long session.
+The launcher builds a Termux fast profile with a 25 ms frame wait, then runs DOSBox-X with `core=dynamic` and `cycles=max`. It sets `frameskip=1`, so DOSBox-X skips alternate screen redraws while the game still processes every update. This speeds up gameplay on the Xiaomi Pad 7; motion is less smooth, and performance varies by device. Desktop builds keep their existing timing. Maximum CPU speed can use more battery and warm the device during a long session.
 
 ## Controls
 
