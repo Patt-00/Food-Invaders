@@ -97,7 +97,8 @@ jobs:
         run: |
           $installer = Join-Path $PWD 'dist\Food-Invaders-Setup-${{ needs.prepare.outputs.version }}-x64.exe'
           $installDir = Join-Path $env:RUNNER_TEMP 'Food Invaders installed'
-          $process = Start-Process -FilePath $installer -ArgumentList @('/VERYSILENT', '/SUPPRESSMSGBOXES', '/NORESTART', "/DIR=$installDir") -Wait -PassThru
+          $installArgument = '/DIR="' + $installDir + '"'
+          $process = Start-Process -FilePath $installer -ArgumentList @('/VERYSILENT', '/SUPPRESSMSGBOXES', '/NORESTART', $installArgument) -Wait -PassThru
           if ($process.ExitCode -ne 0) { throw "Installer returned exit code $($process.ExitCode)." }
           $emulator = Join-Path $installDir 'DOSBox-X\dosbox-x.exe'
           $versionOutput = & $emulator -version 2>&1 | Out-String
