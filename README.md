@@ -84,15 +84,14 @@ ignored `build/` directory.
 | `tests/` | Assembly regression programs, independent ASCII references, and the optional headless runner |
 | `scripts/` | Build, launch, and Windows package scripts |
 | `packaging/` | DOSBox-X settings, Windows installer, and Linux package definitions |
-| `docs/` | Build and Termux guides, architecture notes, and project history |
+| `docs/` | Build and Termux guides, architecture notes, and release notes |
 
 The [development notes](docs/development.md) describe the game loop,
 module boundaries, playfield behavior, and test coverage.
 
 ## Credits and licensing
 
-Food Invaders was developed by a group. The [contributors](CONTRIBUTORS.md)
-and Git history preserve credit for the existing project; this release does
-not claim sole authorship for one person. The game project is licensed under
-[MIT](LICENSE). Bundled third-party software has separate licenses listed in
-[THIRD-PARTY-NOTICES.md](THIRD-PARTY-NOTICES.md).
+Food Invaders was developed as a group project. Contributor credit is shown in
+the [GitHub contributors list](https://github.com/Patt-00/Food-Invaders/graphs/contributors).
+The project is licensed under [MIT](LICENSE). Bundled third-party software has
+separate licenses listed in [THIRD-PARTY-NOTICES.md](THIRD-PARTY-NOTICES.md).

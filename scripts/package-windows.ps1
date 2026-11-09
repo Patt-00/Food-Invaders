@@ -45,7 +45,6 @@ try {
     Copy-Item -LiteralPath (Join-Path $repoRoot 'packaging\dosbox\desktop.conf') -Destination $configDir
     Copy-Item -LiteralPath (Join-Path $repoRoot 'packaging\windows\run-food-invaders.cmd') -Destination $stageRoot
     Copy-Item -LiteralPath (Join-Path $repoRoot 'LICENSE') -Destination $licenseDir
-    Copy-Item -LiteralPath (Join-Path $repoRoot 'CONTRIBUTORS.md') -Destination $licenseDir
     Copy-Item -LiteralPath (Join-Path $repoRoot 'THIRD-PARTY-NOTICES.md') -Destination $licenseDir
     Copy-Item -LiteralPath (Join-Path $emulatorExtract 'COPYING') -Destination (Join-Path $licenseDir 'DOSBox-X-COPYING')
     Copy-Item -LiteralPath $DosBoxSourceArchive -Destination (Join-Path $thirdPartyDir 'dosbox-x-source.tar.gz')

@@ -29,7 +29,6 @@ test -f %{buildroot}/usr/share/doc/food-invaders/third-party/dosbox-x-source.tar
 %license /usr/share/doc/food-invaders/LICENSE
 %license /usr/share/doc/food-invaders/third-party/DOSBox-X-COPYING
 %doc /usr/share/doc/food-invaders/README.md
-%doc /usr/share/doc/food-invaders/CONTRIBUTORS.md
 %doc /usr/share/doc/food-invaders/THIRD-PARTY-NOTICES.md
 %doc /usr/share/doc/food-invaders/third-party/DOSBox-X-SOURCE.txt
 %doc /usr/share/doc/food-invaders/third-party/dosbox-x-source.tar.gz
