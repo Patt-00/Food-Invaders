@@ -106,8 +106,10 @@ jobs:
             Set-Content -LiteralPath $smokeConfig -Encoding ascii
           $env:SDL_VIDEODRIVER = 'dummy'
           $env:SDL_AUDIODRIVER = 'dummy'
-          & $emulator -silent -nopromptfolder -fastlaunch -conf $smokeConfig -noautoexec -c 'exit' *> (Join-Path $env:RUNNER_TEMP 'dosbox-smoke.log')
-          if ($LASTEXITCODE -ne 0) { throw "Installed DOSBox-X failed its headless launch with exit code $LASTEXITCODE." }
+          $smoke = Start-Process -FilePath $emulator `
+            -ArgumentList @('-silent', '-nopromptfolder', '-fastlaunch', '-conf', $smokeConfig, '-noautoexec', '-c', 'exit') `
+            -Wait -PassThru
+          if ($smoke.ExitCode -ne 0) { throw "Installed DOSBox-X failed its headless launch with exit code $($smoke.ExitCode)." }
           if (!(Test-Path (Join-Path $installDir 'game\INVADERS.COM'))) { throw 'Installed game binary is missing.' }
           if (!(Test-Path (Join-Path $installDir 'licenses\DOSBox-X-COPYING'))) { throw 'Bundled DOSBox-X license is missing.' }
           if (!(Test-Path (Join-Path $installDir 'third-party\dosbox-x-source.tar.gz'))) { throw 'Bundled DOSBox-X source is missing.' }
