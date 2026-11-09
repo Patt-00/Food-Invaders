@@ -2,7 +2,7 @@
 set -eu
 
 repo_dir=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)
-game_dir="$repo_dir/asm-space-invaders-main"
+game_dir="$repo_dir/build/termux"
 export DISPLAY="${DISPLAY:-:0}"
 export SDL_VIDEODRIVER=x11
 export SDL_AUDIODRIVER=dummy
@@ -12,8 +12,7 @@ if ! command -v dosbox-x >/dev/null 2>&1; then
     exit 1
 fi
 
-cd "$game_dir"
-nasm -DTERMUX_FAST -f bin main.asm -o INVADERS.COM
+"$repo_dir/scripts/build.sh" --profile termux
 
 if ! xdpyinfo -display "$DISPLAY" >/dev/null 2>&1; then
     termux-x11 "$DISPLAY" > "$repo_dir/termux-x11.log" 2>&1 &
@@ -73,7 +72,7 @@ cycles=max
 mididevice=none
 EOF
 
-dosbox-x -nopromptfolder -fastlaunch -nomenu -conf "$config_file" -c "mount c \"$game_dir\"" -c 'c:' -c 'INVADERS.COM' -c 'exit' &
+dosbox-x -nopromptfolder -fastlaunch -nomenu -conf "$config_file" -noautoexec -c "mount c \"$game_dir\"" -c 'c:' -c 'INVADERS.COM' -c 'exit' &
 emulator_pid=$!
 
 # Termux:X11/SDL2 can retain the old blank surface after VGA timing changes.

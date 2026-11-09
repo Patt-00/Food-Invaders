@@ -1,0 +1,290 @@
+name: Build release packages
+
+on:
+  pull_request:
+  push:
+    tags: ['v1.0.0']
+  workflow_dispatch:
+    inputs:
+      version:
+        description: Release version for a candidate build
+        required: false
+        default: '1.0.0'
+      publish:
+        description: Publish a GitHub release after all package jobs pass
+        required: true
+        type: boolean
+        default: false
+
+permissions:
+  contents: read
+
+jobs:
+  prepare:
+    runs-on: ubuntu-24.04
+    outputs:
+      version: ${{ steps.meta.outputs.version }}
+      publish: ${{ steps.meta.outputs.publish }}
+    steps:
+      - id: meta
+        shell: bash
+        env:
+          INPUT_VERSION: ${{ inputs.version }}
+          INPUT_PUBLISH: ${{ inputs.publish }}
+        run: |
+          if [[ "$GITHUB_REF_TYPE" == tag ]]; then
+            version=${GITHUB_REF_NAME#v}
+            publish=true
+          else
+            version=${INPUT_VERSION:-1.0.0}
+            publish=${INPUT_PUBLISH:-false}
+            if [[ "$publish" == true && "$GITHUB_REF" != refs/heads/main ]]; then
+              echo 'Publish can only be requested from main or a release tag.' >&2
+              exit 2
+            fi
+          fi
+          if [[ ! "$version" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+            echo "Invalid release version: $version" >&2
+            exit 2
+          fi
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+          echo "publish=$publish" >> "$GITHUB_OUTPUT"
+
+  windows:
+    name: Windows x64 installer
+    runs-on: windows-2022
+    timeout-minutes: 60
+    needs: prepare
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Install Inno Setup
+        shell: pwsh
+        run: choco install innosetup --yes --no-progress
+
+      - name: Download and verify pinned NASM and DOSBox-X
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $ProgressPreference = 'SilentlyContinue'
+          $nasmZip = Join-Path $env:RUNNER_TEMP 'nasm.zip'
+          $dosboxZip = Join-Path $env:RUNNER_TEMP 'dosbox-x.zip'
+          $sourceTar = Join-Path $env:RUNNER_TEMP 'dosbox-x-source.tar.gz'
+          Invoke-WebRequest 'https://www.nasm.us/pub/nasm/releasebuilds/3.02/win64/nasm-3.02-win64.zip' -OutFile $nasmZip
+          Invoke-WebRequest 'https://github.com/joncampbell123/dosbox-x/releases/download/dosbox-x-v2026.10.01/dosbox-x-vsbuild-win64-2026.10.01-portable.zip' -OutFile $dosboxZip
+          Invoke-WebRequest 'https://codeload.github.com/joncampbell123/dosbox-x/tar.gz/refs/tags/dosbox-x-v2026.10.01' -OutFile $sourceTar
+          if ((Get-FileHash $dosboxZip -Algorithm SHA256).Hash.ToLowerInvariant() -ne '3c50915e63aefe35777d65ebb4391a06b4a2c2342e4c75cbee6bbda4c6916e33') { throw 'DOSBox-X binary archive checksum mismatch.' }
+          if ((Get-FileHash $sourceTar -Algorithm SHA256).Hash.ToLowerInvariant() -ne 'df023a6c0e4a139dcbd60befff5947e0db2cc68e4e79db463670f581a4044ed4') { throw 'DOSBox-X source checksum mismatch.' }
+          $nasmRoot = Join-Path $env:RUNNER_TEMP 'nasm'
+          Expand-Archive -LiteralPath $nasmZip -DestinationPath $nasmRoot -Force
+          $nasmPath = Join-Path $nasmRoot 'nasm-3.02\nasm.exe'
+          if (!(Test-Path $nasmPath)) { throw 'NASM was not found after extraction.' }
+          "NASM_PATH=$nasmPath" | Out-File -FilePath $env:GITHUB_ENV -Append -Encoding utf8
+          "DOSBOX_ARCHIVE=$dosboxZip" | Out-File -FilePath $env:GITHUB_ENV -Append -Encoding utf8
+          "DOSBOX_SOURCE_ARCHIVE=$sourceTar" | Out-File -FilePath $env:GITHUB_ENV -Append -Encoding utf8
+
+      - name: Build the unsigned installer
+        shell: pwsh
+        run: |
+          $iscc = 'C:\Program Files (x86)\Inno Setup 6\ISCC.exe'
+          if (!(Test-Path $iscc)) { throw 'Inno Setup compiler was not installed.' }
+          .\scripts\package-windows.ps1 -Version '${{ needs.prepare.outputs.version }}' `
+            -NasmPath "$env:NASM_PATH" -DosBoxArchive "$env:DOSBOX_ARCHIVE" `
+            -DosBoxSourceArchive "$env:DOSBOX_SOURCE_ARCHIVE" -IsccPath $iscc -OutputDir .\dist
+
+      - name: Install and inspect the built installer
+        shell: pwsh
+        run: |
+          $installer = Join-Path $PWD 'dist\Food-Invaders-Setup-${{ needs.prepare.outputs.version }}-x64.exe'
+          $installDir = Join-Path $env:RUNNER_TEMP 'Food Invaders installed'
+          $process = Start-Process -FilePath $installer -ArgumentList @('/VERYSILENT', '/SUPPRESSMSGBOXES', '/NORESTART', "/DIR=$installDir") -Wait -PassThru
+          if ($process.ExitCode -ne 0) { throw "Installer returned exit code $($process.ExitCode)." }
+          $emulator = Join-Path $installDir 'DOSBox-X\dosbox-x.exe'
+          $versionOutput = & $emulator -version 2>&1 | Out-String
+          if ($LASTEXITCODE -ne 0 -or $versionOutput -notmatch 'DOSBox-X version 2026\.10\.01') {
+            throw 'The installed DOSBox-X runtime did not report the pinned version.'
+          }
+          if (!(Test-Path (Join-Path $installDir 'game\INVADERS.COM'))) { throw 'Installed game binary is missing.' }
+          if (!(Test-Path (Join-Path $installDir 'licenses\DOSBox-X-COPYING'))) { throw 'Bundled DOSBox-X license is missing.' }
+          if (!(Test-Path (Join-Path $installDir 'third-party\dosbox-x-source.tar.gz'))) { throw 'Bundled DOSBox-X source is missing.' }
+          if (!(Test-Path (Join-Path $installDir 'third-party\DOSBox-X-SOURCE.txt'))) { throw 'DOSBox-X source provenance is missing.' }
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: release-windows-x64
+          path: dist/Food-Invaders-Setup-${{ needs.prepare.outputs.version }}-x64.exe
+          if-no-files-found: error
+          retention-days: 14
+
+  ubuntu:
+    name: Ubuntu 24.04 DEB
+    runs-on: ubuntu-24.04
+    timeout-minutes: 90
+    needs: prepare
+    env:
+      SDL_VIDEODRIVER: dummy
+      SDL_AUDIODRIVER: dummy
+    steps:
+      - uses: actions/checkout@v7
+      - name: Install DOSBox-X build and package dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y build-essential autoconf automake libtool pkg-config \
+            nasm libsdl2-dev libsdl2-net-dev libslirp-dev libpcap-dev libfluidsynth-dev \
+            libxkbfile-dev libxrandr-dev libpng-dev libfreetype6-dev libx11-dev \
+            libxext-dev libxinerama-dev libxrender-dev libxfixes-dev libgl-dev dpkg-dev
+      - name: Build, test, package, and install
+        run: |
+          ./packaging/linux/release-build.sh ubuntu24.04 '${{ needs.prepare.outputs.version }}'
+          sudo apt-get install -y "./dist/food-invaders-${{ needs.prepare.outputs.version }}-ubuntu24.04-amd64.deb"
+          /opt/food-invaders/runtime/bin/dosbox-x -version | grep -F 'DOSBox-X version 2026.10.01'
+          dpkg-deb --contents "dist/food-invaders-${{ needs.prepare.outputs.version }}-ubuntu24.04-amd64.deb" | grep -F 'dosbox-x-source.tar.gz'
+      - name: Verify package launcher arguments
+        run: ./tests/package-launcher-smoke.sh
+      - uses: actions/upload-artifact@v4
+        with:
+          name: release-ubuntu-24.04-x86_64
+          path: dist/food-invaders-${{ needs.prepare.outputs.version }}-ubuntu24.04-amd64.deb
+          if-no-files-found: error
+          retention-days: 14
+
+  debian:
+    name: Debian 13 DEB
+    runs-on: ubuntu-24.04
+    timeout-minutes: 90
+    needs: prepare
+    steps:
+      - uses: actions/checkout@v7
+      - name: Build, test, package, and install in Debian 13
+        env:
+          RELEASE_VERSION: ${{ needs.prepare.outputs.version }}
+        run: |
+          docker run --rm -e RELEASE_VERSION -v "$GITHUB_WORKSPACE:/workspace" -w /workspace debian:13 sh -ec '
+            export DEBIAN_FRONTEND=noninteractive
+            apt-get update
+            apt-get install -y build-essential autoconf automake libtool pkg-config curl ca-certificates \
+              nasm libsdl2-dev libsdl2-net-dev libslirp-dev libpcap-dev libfluidsynth-dev \
+              libxkbfile-dev libxrandr-dev libpng-dev libfreetype6-dev libx11-dev \
+              libxext-dev libxinerama-dev libxrender-dev libxfixes-dev libgl-dev dpkg-dev
+            ./packaging/linux/release-build.sh debian13 "$RELEASE_VERSION"
+            apt-get install -y "./dist/food-invaders-$RELEASE_VERSION-debian13-amd64.deb"
+            /opt/food-invaders/runtime/bin/dosbox-x -version | grep -F "DOSBox-X version 2026.10.01"
+            dpkg-deb --contents "dist/food-invaders-$RELEASE_VERSION-debian13-amd64.deb" | grep -F dosbox-x-source.tar.gz
+          '
+      - name: Verify package launcher arguments
+        run: ./tests/package-launcher-smoke.sh
+      - uses: actions/upload-artifact@v4
+        with:
+          name: release-debian-13-x86_64
+          path: dist/food-invaders-${{ needs.prepare.outputs.version }}-debian13-amd64.deb
+          if-no-files-found: error
+          retention-days: 14
+
+  fedora:
+    name: Fedora 44 RPM
+    runs-on: ubuntu-24.04
+    timeout-minutes: 90
+    needs: prepare
+    steps:
+      - uses: actions/checkout@v7
+      - name: Build, test, package, and install in Fedora 44
+        env:
+          RELEASE_VERSION: ${{ needs.prepare.outputs.version }}
+        run: |
+          docker run --rm -e RELEASE_VERSION -v "$GITHUB_WORKSPACE:/workspace" -w /workspace fedora:44 sh -ec '
+            dnf install -y gcc gcc-c++ make autoconf automake libtool pkgconf-pkg-config curl ca-certificates \
+              nasm SDL2-devel SDL2_net-devel libslirp-devel libpcap-devel fluidsynth-devel \
+              libxkbfile-devel ncurses-devel libpng-devel freetype-devel libXrandr-devel \
+              libX11-devel libXext-devel libXrender-devel libXinerama-devel mesa-libGL-devel \
+              alsa-lib-devel rpm-build tar gzip
+            ./packaging/linux/release-build.sh fedora44 "$RELEASE_VERSION"
+            dnf install -y "./dist/food-invaders-$RELEASE_VERSION-fedora44-x86_64.rpm"
+            /opt/food-invaders/runtime/bin/dosbox-x -version | grep -F "DOSBox-X version 2026.10.01"
+            rpm -qpl "dist/food-invaders-$RELEASE_VERSION-fedora44-x86_64.rpm" | grep -F dosbox-x-source.tar.gz
+          '
+      - name: Verify package launcher arguments
+        run: ./tests/package-launcher-smoke.sh
+      - uses: actions/upload-artifact@v4
+        with:
+          name: release-fedora-44-x86_64
+          path: dist/food-invaders-${{ needs.prepare.outputs.version }}-fedora44-x86_64.rpm
+          if-no-files-found: error
+          retention-days: 14
+
+  assemble:
+    name: Assemble release bundle
+    runs-on: ubuntu-24.04
+    needs: [prepare, windows, ubuntu, debian, fedora]
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: release-*
+          path: dist
+          merge-multiple: true
+      - name: Generate checksum manifest and candidate provenance
+        env:
+          RELEASE_VERSION: ${{ needs.prepare.outputs.version }}
+        run: |
+          cd dist
+          sha256sum * > SHA256SUMS.txt
+          {
+            echo "Food Invaders version: $RELEASE_VERSION"
+            echo "Source commit: $GITHUB_SHA"
+            echo 'Bundled emulator: DOSBox-X 2026.10.01 (b6abbd5980a885f5f310a4088c59a8688d1b116c)'
+            echo 'DOSBox-X source archive SHA-256: df023a6c0e4a139dcbd60befff5947e0db2cc68e4e79db463670f581a4044ed4'
+            echo "Build workflow: $GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID"
+          } > PROVENANCE.txt
+          sha256sum PROVENANCE.txt >> SHA256SUMS.txt
+      - uses: actions/upload-artifact@v4
+        with:
+          name: release-candidate
+          path: dist/*
+          if-no-files-found: error
+          retention-days: 30
+
+  publish:
+    name: Publish GitHub release
+    runs-on: ubuntu-24.04
+    needs: [prepare, assemble]
+    if: needs.prepare.outputs.publish == 'true'
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+      - uses: actions/download-artifact@v4
+        with:
+          name: release-candidate
+          path: dist
+      - name: Verify candidate checksums
+        run: (cd dist && sha256sum --check SHA256SUMS.txt)
+      - name: Require the release commit on main
+        run: |
+          git fetch origin main
+          if ! git merge-base --is-ancestor "$GITHUB_SHA" origin/main; then
+            echo 'The release commit must be reachable from protected main.' >&2
+            exit 2
+          fi
+      - name: Publish v1.0.0 assets
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RELEASE_VERSION: ${{ needs.prepare.outputs.version }}
+        run: |
+          if [ "$RELEASE_VERSION" != '1.0.0' ]; then
+            echo 'This release workflow currently has approved notes for v1.0.0 only.' >&2
+            exit 2
+          fi
+          tag="v$RELEASE_VERSION"
+          if gh release view "$tag" >/dev/null 2>&1; then
+            echo "Release $tag already exists; refusing to replace release assets." >&2
+            exit 2
+          fi
+          if git rev-parse --verify "refs/tags/$tag" >/dev/null 2>&1; then
+            gh release create "$tag" dist/* --title "Food Invaders $tag" \
+              --notes-file docs/releases/v1.0.0.md --verify-tag
+          else
+            gh release create "$tag" dist/* --title "Food Invaders $tag" \
+              --notes-file docs/releases/v1.0.0.md --target "$GITHUB_SHA"
+          fi

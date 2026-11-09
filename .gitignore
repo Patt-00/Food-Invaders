@@ -1,13 +1,18 @@
-# Generated DOS executables, runtime logs, and local verification images.
+# Generated builds, installers, DOS logs and local preview images.
+/.DS_Store
 *.COM
 RESULT.TXT
 *.log
 *-preview.png
-asm-space-invaders-main/capture/
+*.lst
+/build/
+/dist/
+/DOSBox/
+/tests/generated-test.conf
+/tests/TESTLOG.TXT
+/tests/PBLOG.TXT
+/tests/COLLLOG.TXT
+/tests/STATUS.TXT
+/tests/dosbox-host.log
+/termux-x11.log
 .codex-build/
-/asm-space-invaders-main/TESTLOG.TXT
-/asm-space-invaders-main/PBLOG.TXT
-/asm-space-invaders-main/COLLLOG.TXT
-/asm-space-invaders-main/STATUS.TXT
-/asm-space-invaders-main/tests/generated-test.conf
-/asm-space-invaders-main/tests/dosbox-host.log

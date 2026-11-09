@@ -1,61 +1,98 @@
 # Food Invaders
 
-[![Windows and macOS build tests](https://github.com/Patt-00/Food-Invaders/actions/workflows/platform-build-test.yml/badge.svg?branch=main)](https://github.com/Patt-00/Food-Invaders/actions/workflows/platform-build-test.yml)
+[![Build and test](https://github.com/Patt-00/Food-Invaders/actions/workflows/platform-build-test.yml/badge.svg?branch=main)](https://github.com/Patt-00/Food-Invaders/actions/workflows/platform-build-test.yml)
+[![Latest release](https://img.shields.io/github/v/release/Patt-00/Food-Invaders)](https://github.com/Patt-00/Food-Invaders/releases/latest)
+[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 
-Food Invaders is a 16-bit NASM arcade game for 386-compatible real-mode DOS. Play as the Chef and defend the kitchen from food-themed invaders. The game keeps the original colored ASCII art at its source dimensions and displays it in a 180×120 SVGA text field. DOSBox-X runs it full-screen at a 3:2 aspect ratio.
+Food Invaders is a 16-bit NASM arcade game for 386-compatible DOS. Play as the
+Chef, dodge food-themed enemies and defend the kitchen with two weapons. It
+runs in DOSBox-X and renders the group's colored ASCII art in a 180 × 120
+SVGA text field.
+
+The game was built as a group project and takes its arcade idea from Space
+Invaders. It has its own Assembly implementation, game rules, and artwork.
+The project used [`doctorfree/ninvaders`](https://github.com/doctorfree/ninvaders/tree/dc38ab8db9ecdb5f69fbd3b3deb42e253d6f08c3)
+as a playable text-mode reference; Food Invaders does not include its source
+code.
+
+## Download and play
+
+Get the latest release from [GitHub Releases](https://github.com/Patt-00/Food-Invaders/releases/latest).
+The Windows installer and Linux packages include the game and DOSBox-X, so
+you can install and start playing without assembling the source first.
+
+| Platform | Package | Install or launch |
+| --- | --- | --- |
+| Windows x64 | Unsigned setup installer | Run `Food-Invaders-Setup-1.0.0-x64.exe`, then open Food Invaders from the Start menu. |
+| Fedora 44 x86_64 | RPM package | `sudo dnf install ./food-invaders-1.0.0-fedora44-x86_64.rpm` |
+| Ubuntu 24.04 x86_64 | DEB package | `sudo apt install ./food-invaders-1.0.0-ubuntu24.04-amd64.deb` |
+| Debian 13 x86_64 | DEB package | `sudo apt install ./food-invaders-1.0.0-debian13-amd64.deb` |
+
+See the [installation guide](docs/BUILDING-GUIDE.md) for package details,
+source builds, and troubleshooting. DOSBox-X remains under its own GPL
+license; the packages include its license and corresponding source.
 
 ## Game features
 
-- The 180×120 field has 21,600 character cells, about 86% more than a 132×88 field.
-- Four waves of randomized food enemies lead to a fifth stage with Ratatouille, a 20 HP boss.
-- Enemies move and fire on independent timers, keep four cells apart, and stay above the Chef's eight-row safety line.
-- Choose Easy, Normal, or Hard. Use the cleaver, rolling pin, and temporary power-ups.
-
-## Run on Linux
-
-From the repository root, run:
-
-```sh
-./run-linux.sh
-```
-
-The script builds `INVADERS.COM` from `asm-space-invaders-main/main.asm` and launches DOSBox-X. It uses the native `dosbox-x` command when available, or the DOSBox-X Flatpak. The preset uses `cycles=max`, which can increase CPU use, heat, and battery drain on mobile devices.
-
-## Run on Termux
-
-See the [Termux installation guide](docs/TERMUX-INSTALLATION.md) for app setup, package installation, launch steps, and troubleshooting. Then run this from the repository root:
-
-```sh
-./run-termux.sh
-```
-
-The game uses DOSBox-X's SVGA S3 mode. The launcher fills the Termux:X11 display while keeping the board's proportions. A text-only Termux session cannot display the game window.
-
-## Run on Windows or macOS
-
-Use the [Windows and macOS building guide](docs/BUILDING-GUIDE.md) to install NASM and DOSBox-X, build the game, and launch it.
+- Four waves with independent enemy movement and firing, followed by a
+  20-health Ratatouille boss.
+- Easy, Normal, and Hard settings change starting lives and enemy timing.
+- Space fires the cleaver; X fires the slower, stronger rolling pin.
+- Collect falling fireballs for temporary speed, damage, and rapid-fire boosts.
+- Original ASCII designs are rendered at their documented character-cell size.
 
 ## Controls
 
 | Key | Action |
 | --- | --- |
 | A/D or arrow keys | Move the Chef |
-| Space | Fire a cleaver |
-| X | Fire a rolling pin |
+| Space | Fire the cleaver; start on Normal in the menu |
+| X | Fire the rolling pin |
 | 1, 2, or 3 | Start on Easy, Normal, or Hard |
-| P or Space | Start on Normal |
 | R | Restart after a result screen |
 | Q or Escape | Quit |
 
-The campaign has four regular waves and a final Ratatouille boss stage. Enemy positions and firing delays are randomized, and later waves increase the difficulty. Enemy bullets use a single text cell. The fireball power-up falls one row every 50 ms.
+## Build from source
 
-## Project details
+Requirements: NASM and DOSBox-X. From the repository root:
 
-The project documentation includes:
+```sh
+./scripts/build.sh
+./run-linux.sh
+```
 
-- [Game details and code structure](asm-space-invaders-main/README.md)
-- [Windows and macOS building guide](docs/BUILDING-GUIDE.md)
-- [Developer 2 contribution](asm-space-invaders-main/DEVELOPER2.md)
-- [Windows and macOS build workflow](.github/workflows/platform-build-test.yml)
+On Termux:X11, install `git`, `nasm`, `dosbox-x`, `termux-x11-nightly`,
+`xorg-xdpyinfo`, and `xdotool`, then run `./run-termux.sh`. See the
+[Termux guide](docs/TERMUX-INSTALLATION.md). Windows and macOS setup steps are
+in the [installation guide](docs/BUILDING-GUIDE.md).
 
-The [normal-core result](asm-space-invaders-main/tests/integrated-normal-result.txt) and [dynamic-core result](asm-space-invaders-main/tests/integrated-dynamic-result.txt) record the latest local DOSBox-X regression runs.
+To build and run the Assembly regression suites on DOSBox-X:
+
+```sh
+./scripts/build.sh --test --core both
+```
+
+PowerShell users can run the same build and tests with
+`./scripts/build.ps1 -Test -Core both`. Test binaries and logs go under the
+ignored `build/` directory.
+
+## Source layout
+
+| Path | Contents |
+| --- | --- |
+| `src/` | Game entry point, state, renderer, combat, enemy, and progression modules |
+| `tests/` | Assembly regression programs, independent ASCII references, and the optional headless runner |
+| `scripts/` | Build, launch, and Windows package scripts |
+| `packaging/` | DOSBox-X settings, Windows installer, and Linux package definitions |
+| `docs/` | Build and Termux guides, architecture notes, and project history |
+
+The [development notes](docs/development.md) describe the game loop,
+module boundaries, playfield behavior, and test coverage.
+
+## Credits and licensing
+
+Food Invaders was developed by a group. The [contributors](CONTRIBUTORS.md)
+and Git history preserve credit for the existing project; this release does
+not claim sole authorship for one person. The game project is licensed under
+[MIT](LICENSE). Bundled third-party software has separate licenses listed in
+[THIRD-PARTY-NOTICES.md](THIRD-PARTY-NOTICES.md).

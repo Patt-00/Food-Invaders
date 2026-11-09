@@ -1,0 +1,8 @@
+[Desktop Entry]
+Type=Application
+Name=Food Invaders
+Comment=16-bit NASM arcade game with colored ASCII art
+Exec=/usr/bin/food-invaders
+Terminal=false
+Categories=Game;ArcadeGame;
+StartupNotify=false

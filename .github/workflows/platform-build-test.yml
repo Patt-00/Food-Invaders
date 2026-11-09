@@ -1,4 +1,4 @@
-name: Windows and macOS build tests
+name: Build and test
 
 on:
   push:
@@ -40,15 +40,13 @@ jobs:
 
       - name: Build and run normal-core suites
         shell: pwsh
-        working-directory: asm-space-invaders-main
         run: |
-          & .\build.ps1 -NasmPath "$env:NASM_PATH" -DosBoxPath "$env:DOSBOX_X_PATH" -Test -Core normal
+          & .\scripts\build.ps1 -NasmPath "$env:NASM_PATH" -DosBoxPath "$env:DOSBOX_X_PATH" -Test -Core normal
 
       - name: Run dynamic-core suites
         shell: pwsh
-        working-directory: asm-space-invaders-main
         run: |
-          & .\build.ps1 -NasmPath "$env:NASM_PATH" -DosBoxPath "$env:DOSBOX_X_PATH" -Test -Core dynamic
+          & .\scripts\build.ps1 -NasmPath "$env:NASM_PATH" -DosBoxPath "$env:DOSBOX_X_PATH" -Test -Core dynamic
 
   macos:
     name: macOS
@@ -62,18 +60,6 @@ jobs:
 
       - name: Install NASM
         run: brew install nasm
-
-      - name: Install PowerShell 7
-        shell: bash
-        run: |
-          case "$(uname -m)" in
-            arm64) powershell_asset=powershell-7.6.6-osx-arm64.pkg ;;
-            x86_64) powershell_asset=powershell-7.6.6-osx-x64.pkg ;;
-            *) echo "Unsupported runner architecture: $(uname -m)" >&2; exit 1 ;;
-          esac
-          powershell_url="https://github.com/PowerShell/PowerShell/releases/download/v7.6.6/$powershell_asset"
-          curl --fail --location "$powershell_url" --output "$RUNNER_TEMP/powershell.pkg"
-          sudo installer -pkg "$RUNNER_TEMP/powershell.pkg" -target /
 
       - name: Download DOSBox-X for this runner architecture
         shell: bash
@@ -92,9 +78,36 @@ jobs:
           echo "DOSBOX_X_PATH=$dosbox_path" >> "$GITHUB_ENV"
 
       - name: Build and run normal-core suites
-        working-directory: asm-space-invaders-main
-        run: pwsh -NoProfile -File ./build.ps1 -NasmPath "$(command -v nasm)" -DosBoxPath "$DOSBOX_X_PATH" -Test -Core normal
+        run: ./scripts/build.sh --test --core normal --nasm "$(command -v nasm)" --dosbox "$DOSBOX_X_PATH"
 
       - name: Run dynamic-core suites
-        working-directory: asm-space-invaders-main
-        run: pwsh -NoProfile -File ./build.ps1 -NasmPath "$(command -v nasm)" -DosBoxPath "$DOSBOX_X_PATH" -Test -Core dynamic
+        run: ./scripts/build.sh --test --core dynamic --nasm "$(command -v nasm)" --dosbox "$DOSBOX_X_PATH"
+
+  linux:
+    name: Ubuntu package and DOSBox-X suites
+    runs-on: ubuntu-24.04
+    timeout-minutes: 60
+    env:
+      SDL_VIDEODRIVER: dummy
+      SDL_AUDIODRIVER: dummy
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Install DOSBox-X build dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y build-essential autoconf automake libtool pkg-config \
+            nasm libsdl2-dev libsdl2-net-dev libslirp-dev libpcap-dev libfluidsynth-dev \
+            libxkbfile-dev libxrandr-dev libpng-dev libfreetype6-dev libx11-dev \
+            libxext-dev libxinerama-dev libxrender-dev libxfixes-dev libgl-dev dpkg-dev
+
+      - name: Build the Ubuntu package and run both DOSBox-X cores
+        run: ./packaging/linux/release-build.sh ubuntu24.04 1.0.0
+
+      - name: Install package and smoke-check the bundled emulator
+        run: |
+          sudo apt-get install -y ./dist/food-invaders-1.0.0-ubuntu24.04-amd64.deb
+          /opt/food-invaders/runtime/bin/dosbox-x -version | grep -F 'DOSBox-X version 2026.10.01'
+
+      - name: Test the installed package launcher arguments
+        run: ./tests/package-launcher-smoke.sh

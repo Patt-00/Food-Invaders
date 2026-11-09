@@ -1,0 +1,19 @@
+#!/bin/sh
+set -eu
+
+app_root=${FOOD_INVADERS_ROOT:-/opt/food-invaders}
+emulator=${DOSBOX_X_PATH:-"$app_root/runtime/bin/dosbox-x"}
+game_dir="$app_root/game"
+config="$app_root/config/desktop.conf"
+
+if [ ! -x "$emulator" ]; then
+    printf 'Bundled DOSBox-X is missing: %s\n' "$emulator" >&2
+    exit 1
+fi
+if [ ! -f "$game_dir/INVADERS.COM" ]; then
+    printf 'Food Invaders game binary is missing: %s\n' "$game_dir/INVADERS.COM" >&2
+    exit 1
+fi
+
+exec "$emulator" -nopromptfolder -fastlaunch -conf "$config" -noautoexec \
+    -c "mount c \"$game_dir\"" -c 'c:' -c 'INVADERS.COM' -c 'exit'
