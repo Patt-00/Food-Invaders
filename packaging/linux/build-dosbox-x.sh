@@ -30,4 +30,9 @@ if [ ! -x "$binary" ]; then
     printf 'DOSBox-X install did not produce %s\n' "$binary" >&2
     exit 1
 fi
-"$binary" -version
+version_output=$("$binary" -version 2>&1 || true)
+printf '%s\n' "$version_output"
+if ! printf '%s\n' "$version_output" | grep -F 'DOSBox-X version 2026.10.01' >/dev/null; then
+    printf 'The bundled emulator did not report DOSBox-X 2026.10.01.\n' >&2
+    exit 1
+fi
