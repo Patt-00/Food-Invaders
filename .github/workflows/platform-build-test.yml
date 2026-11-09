@@ -107,7 +107,7 @@ jobs:
       - name: Install package and smoke-check the bundled emulator
         run: |
           sudo apt-get install -y ./dist/food-invaders-1.0.0-ubuntu24.04-amd64.deb
-          /opt/food-invaders/runtime/bin/dosbox-x -version | grep -F 'DOSBox-X version 2026.10.01'
+          /opt/food-invaders/runtime/bin/dosbox-x -version 2>&1 | grep -F 'DOSBox-X version 2026.10.01'
 
       - name: Test the installed package launcher arguments
         run: ./tests/package-launcher-smoke.sh

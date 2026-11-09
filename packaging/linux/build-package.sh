@@ -83,7 +83,21 @@ case "$format" in
     deb)
         command -v dpkg-deb >/dev/null 2>&1 || { echo 'dpkg-deb is required.' >&2; exit 1; }
         command -v dpkg-shlibdeps >/dev/null 2>&1 || { echo 'dpkg-shlibdeps from dpkg-dev is required.' >&2; exit 1; }
-        depends_line=$(dpkg-shlibdeps -O -e "$stage/opt/food-invaders/runtime/bin/dosbox-x" | sed -n 's/^shlibs:Depends=//p')
+        mkdir -p "$workdir/debian"
+        cat > "$workdir/debian/control" <<'EOF'
+Source: food-invaders
+Section: games
+Priority: optional
+Maintainer: Food Invaders contributors <318558214+Patt-00@users.noreply.github.com>
+Standards-Version: 4.6.2
+
+Package: food-invaders
+Architecture: amd64
+Description: NASM arcade game with DOSBox-X bundled
+ Food Invaders is a 16-bit DOS arcade game with original colored ASCII art.
+ This package includes the DOSBox-X runtime and its corresponding source.
+EOF
+        depends_line=$(CDPATH= cd -- "$workdir" && dpkg-shlibdeps -O -e "$stage/opt/food-invaders/runtime/bin/dosbox-x" | sed -n 's/^shlibs:Depends=//p')
         if [ -z "$depends_line" ]; then echo 'Could not derive Debian shared-library dependencies.' >&2; exit 1; fi
         mkdir -p "$stage/DEBIAN"
         cat > "$stage/DEBIAN/control" <<EOF

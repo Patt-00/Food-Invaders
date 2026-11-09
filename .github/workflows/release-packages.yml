@@ -141,7 +141,7 @@ jobs:
         run: |
           ./packaging/linux/release-build.sh ubuntu24.04 '${{ needs.prepare.outputs.version }}'
           sudo apt-get install -y "./dist/food-invaders-${{ needs.prepare.outputs.version }}-ubuntu24.04-amd64.deb"
-          /opt/food-invaders/runtime/bin/dosbox-x -version | grep -F 'DOSBox-X version 2026.10.01'
+          /opt/food-invaders/runtime/bin/dosbox-x -version 2>&1 | grep -F 'DOSBox-X version 2026.10.01'
           dpkg-deb --contents "dist/food-invaders-${{ needs.prepare.outputs.version }}-ubuntu24.04-amd64.deb" | grep -F 'dosbox-x-source.tar.gz'
       - name: Verify package launcher arguments
         run: ./tests/package-launcher-smoke.sh
@@ -172,7 +172,7 @@ jobs:
               libxext-dev libxinerama-dev libxrender-dev libxfixes-dev libgl-dev dpkg-dev
             ./packaging/linux/release-build.sh debian13 "$RELEASE_VERSION"
             apt-get install -y "./dist/food-invaders-$RELEASE_VERSION-debian13-amd64.deb"
-            /opt/food-invaders/runtime/bin/dosbox-x -version | grep -F "DOSBox-X version 2026.10.01"
+            /opt/food-invaders/runtime/bin/dosbox-x -version 2>&1 | grep -F "DOSBox-X version 2026.10.01"
             dpkg-deb --contents "dist/food-invaders-$RELEASE_VERSION-debian13-amd64.deb" | grep -F dosbox-x-source.tar.gz
           '
       - name: Verify package launcher arguments
@@ -203,7 +203,7 @@ jobs:
               alsa-lib-devel rpm-build tar gzip
             ./packaging/linux/release-build.sh fedora44 "$RELEASE_VERSION"
             dnf install -y "./dist/food-invaders-$RELEASE_VERSION-fedora44-x86_64.rpm"
-            /opt/food-invaders/runtime/bin/dosbox-x -version | grep -F "DOSBox-X version 2026.10.01"
+            /opt/food-invaders/runtime/bin/dosbox-x -version 2>&1 | grep -F "DOSBox-X version 2026.10.01"
             rpm -qpl "dist/food-invaders-$RELEASE_VERSION-fedora44-x86_64.rpm" | grep -F dosbox-x-source.tar.gz
           '
       - name: Verify package launcher arguments
