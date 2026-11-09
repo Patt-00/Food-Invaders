@@ -547,6 +547,8 @@ tests_start:
  mov bl,0Ah
  call verify_art_rows
  inc dword [test_count]
+ ; This pickup fixture must not overwrite a later randomized boss sprite.
+ mov byte [pickup_active],0
  mov eax,0FFFFFFFFh
  mov edx,5
  mov bx,0F58h
